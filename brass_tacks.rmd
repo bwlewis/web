@@ -1,0 +1,146 @@
+# Data.frame/table brass tacks (the pointy part)
+
+Matt Dowle and Arun Srinivasan's^[along with many other contributors]
+data.table package is a data.frame twin with amazing performance. Often, it's
+the fastest way to operate on in-memory tabular data, period (not just in R!).
+
+I've used data.table for performance reasons in projects for many years now.
+There are a few things to watch out for outlined in these notes (I have
+stumbled across both in practice). Fortunately they are not that problematic to
+deal with.
+
+
+## Data.frames
+
+R's data.frame is simply an R list with extra attributes: class = "data.frame"
+and  row.names = (integer or character vector of row names).  Data.frame column
+names (if any) are taken from the list names.
+
+That is, you can make a data.frame the usual way:
+
+```{r}
+x <- data.frame(v = 1:2, a = c(pi, 5))
+```
+
+or, like this if you prefer^[Mostly, there are some edge-case exceptions to
+this however!]:
+
+```{r}
+y <- structure(
+       list(v = 1:2, a = c(pi, 5)),
+       class = "data.frame",
+       row.names = 1:2)
+all.equal(x, y)
+```
+
+R defines the number of rows of a data.frame to be the length of its
+`row.names` vector attribute. The number of columns is simply the
+length of the list.
+
+
+This simple scheme is very flexible! Each data.frame list entry (column) is effectively
+a memory pointer to a native R vector. And usually, R tries to defer copying
+data until it must. Consider the following example run on my laptop with
+8GB RAM:
+
+```{r}
+system.time({
+  x <- runif(4e8)
+  y <- runif(4e8, 0, 10)
+})
+
+system.time({d <- data.frame(y, x)})
+```
+
+Each vector x and y consume about 3GB of RAM for a total of about 6GB.
+Creation of the data.frame d above happens instantly without data copy because
+its columns simply contain pointers to y and x. (Of course, subsequently
+modifying the values would induce a copy.)
+
+Re-arranging columns in a data.frame simply re-arranges pointers and need not
+always copy data:
+
+```{r}
+system.time({print(tail(d[, order(names(d))]))})
+```
+That operation (ordering columns and printing the tail) ran almost
+instantly on my laptop.
+
+
+
+## Data.table corner cases
+
+Data.tables are blobs of data behind a reference pointer that (mostly) emulate
+standard data.frame structure and behavior.  They are almost always faster and
+more efficient than standard R data.frames (and I often encourage their use),
+but there exist situations where plain old data.frames can be more efficient.
+
+First, let's run rm and gc to free up the 6GB memory used by the previous example
+before proceeding:
+
+```{r}
+rm(list = ls())
+gc()
+```
+
+Now consider this:
+```{r}
+library(data.table)
+system.time({
+  dt <- data.table(x = runif(4e8), y = runif(4e8, 0, 10))
+})
+```
+Why did that take so long? Because data.table made copies of the data,
+which happen to be larger than the RAM in my laptop in this case, and
+thus operating system swap was involved.
+
+Somewhat more problematically, unlike base-R data.frames, simply re-ordering
+data.table columns sometimes induces data copies. For example:
+
+```{r}
+system.time({print(tail(dt[, order(names(dt)), with = FALSE]))})
+```
+
+That's a bit of a bummer--watch out for it. The work around here is usually to
+try to use "the data.table way" as much as possible to solve problems.
+
+
+## Data.table function arguments
+
+Another brass tack with data.table that you should be aware of is that
+data.table function arguments are call-by-reference, unlike the standard R
+function argument call-by-value convention. (See, for instance,
+https://cran.r-project.org/doc/manuals/r-release/R-lang.html#Argument-evaluation).
+I've actually personally wrestled with hard-to-find bugs resulting from this, so it is
+something to watch out for. To be fair, environment function arguments are also
+call-by-reference in R, so it may help to think of data.tables like that.
+
+
+## Sort order
+
+Be aware that data.table sorts using the 'C' locale (ASCII, basically), which
+is almost certainly *not* the way your R session defaults to sorting things.
+
+Here is an example:
+
+```{r}
+set.seed(1)
+a <- sample(c(letters, LETTERS), 10)
+
+x <- data.table(a = a)
+setkeyv(x, "a")  # sort the data.table by the contents of 'a'
+a <- sort(a)     # sort 'a' in plain old R and compare:
+cbind(x, a)
+```
+
+Forcing R to use the C local makes the sort order the same:
+
+```{r}
+Sys.setlocale("LC_COLLATE", "C")
+a <- sort(a)
+cbind(x, a)
+```
+
+
+
+<br/> <br/> <br/> <br/>

@@ -1,0 +1,119 @@
+<html>
+<a href="https://cran.r-project.org" style="font-size: 4em;">R</a>
+is one of those programs that I prefer to install from source code on Linux.
+This is mainly because, as a package developer, I frequently install nightly R
+development builds anyway for package testing, and for general computing I like
+to work with the most recent stable release (which is updated semiannually).
+
+<p>
+R's use of system BLAS (basic linear algebra subroutines) and LAPACK libraries
+is of particular importance to me because I often work on problems with
+significant linear algebra components. I prefer to build R with the default
+(and slow) shared reference libraries and then post-installation swap out
+libraries using symbolic links as described in the R administration manual
+here: 
+<a href="https://cran.r-project.org/doc/manuals/R-admin.html#Shared-BLAS">https://cran.r-project.org/doc/manuals/R-admin.html#Shared-BLAS</a>
+This approach adds an extra post-installation step, but makes it easy
+to experiment with lots of different BLAS libraries by simply changing
+a link.
+</p>
+
+<p>
+If you're on Windows systems, this old talk
+<a href="http://goo.gl/gcPezs">http://goo.gl/gcPezs</a> has a short section
+on installing R with a high-performance BLAS library on Windows. (It's a bit
+old now and might need to be updated, but the general idea is there.)
+</p>
+
+Here is how I build and install R on Debian (Ubuntu)-like Linux systems,
+shown using the latest stable version of R at the time of this writing.
+<pre style="background-color: #eee;">
+Prepare your operating system to build R, installing required dependencies
+sudo apt-get build-dep r-base
+
+# Depending on your OS you might also want (pick your favorite CURL variant)
+sudo apt-get install libcurl4-gnutls-dev
+
+# Download R source code
+wget https://cran.r-project.org/src/base/R-3/R-3.3.1.tar.gz
+
+# Uncompress R source code
+tar xf R-3.3.1.tar.gz
+
+# Configure R
+# --enable-memory-profiling (compile support for Rprofmem--useful!)
+# --enable-R-shlib  (needed by RStudio if you're in to that kind of thing)
+# Note that --with-blas and --with-lapack are set by default to use
+# the reference versions, as is the  --enable-BLAS-shlib setting (except on AIX).
+# R will be installed into /usr/local by default, OK with me!
+
+cd R-3.3.1
+./configure --enable-memory-profiling --enable-R-shlib
+make -j 4     # change the '4' to the number of CPUs you've got for faster compilation
+sudo make install
+</pre>
+
+At this point, R is installed with reference BLAS and LAPACK libraries. These
+are great for testing, but don't use threading and even more importantly don't
+use vector floating-point CPU instructions. That means that things like matrix
+multiplication, eigenvalues, and SVDs will run more slowly than they could on
+nearly all processors.
+
+The <a href="https://github.com/xianyi/OpenBLAS">Open BLAS</a> project is an
+open-source version of the superb Goto BLAS library. It provides extremely good
+use of vectorized CPU instructions and CPU caches and support for OpenMP
+threading, and its performance rivals and sometimes exceeds the best commercial
+BLAS libraries like the Intel MKL (depending on your processor of course).
+
+Here is how I enable OpenBLAS for R on my Ubuntu system:
+<pre style="background-color: #eee;">
+sudo apt-get install libopenblas-dev
+cd /usr/local/lib/R/lib
+sudo mv libRblas.so libRblas.so-reference      # keep a copy for posterity
+sudo ln -s /usr/lib/openblas-base/libblas.so.3 libRblas.so
+</pre>
+
+Optionally, also link the R LAPACK library. This step is generall much less
+important for overall performance, and depending on the libraries used might
+not even work (LAPACK is less well-covered than the BLAS API in some
+libraries, so some important functions might be missing).
+<pre>
+sudo mv libRlapack.so libRlapack.so-reference
+sudo ln -s /usr/lib/openblas-base/libblas.so.3 libRlapack.so
+</pre>
+
+Your machine is now equipped with R + a great BLAS/LAPACK library!
+
+<h3>SMT/Hyperthreading</h3>
+
+If you're using the Intel MKL BLAS library, then you don't have to worry about
+this section. If you're using OpenBLAS or some other OpenMP-based threading
+BLAS library (including the AMD ACML BLAS), then this section can improve your
+performance! The MKL BLAS knows how to deal with SMT optimally on its own.
+
+Some Intel systems (and soon, some new AMD Zen processor systems) can run more
+than one thread per physical CPU core, sometimes called hyperthreading or
+simultaneous multi-threading. This can work really well for mixed
+integer/floating-point workloads, but can sometimes slow things down for heavy
+floating-point only computations (because there is only one floating point unit
+per core typically).
+
+If hyperthreading is enabled on your system, you'll want to start R so that it
+is limited to using the total number of physical threads on your system in OpenMP code
+by setting the OMP_NUM_THREADS system variable. For instance:
+<pre style="background-color: #eee;">
+OMP_NUM_THREADS=4 R
+</pre>
+tells R to use at most 4 threads, corresponding to a computer with four physical
+CPU cores. If you don't specify a thread limit, OpenMP defaults to using the
+maximum number of threads reported by the system, which may be too many for floating point operations.
+<p>
+Note! Some processors have one floating point unit per
+core, others might not. For instance, the AMD Opteron 6380 processor has
+only one floating point unit for every <i>two</i> CPU cores.
+
+You can set this as default by putting a line like:
+<pre style="background-color: #eee;">
+echo "export OMP_NUM_THREADS=4" >> ~/.bashrc
+</pre>
+in your bash start up file (assuming you use the bash shell, which you should!).

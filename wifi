@@ -1,0 +1,42 @@
+#!/bin/bash
+# Bryan's trivial wifi management script
+
+[ -z "$IFACE" ] && IFACE=wlan0   # Wifi interface
+
+[ $# -lt 1 ] && echo -e "wifi --list\nwifi --off\nwifi network [optional wpa pass]\nIFACE=interface wifi ... to specify wifi interface different from 'wlan0'." && exit 0
+
+if test "$1" = "--list"; then
+  sudo ifconfig $IFACE up
+  sudo iwlist $IFACE scanning | grep -e ESSID -e "Quality" -e "Encryption" | paste -d " " - - - | tr -s "[:blank:]" | sed -e "s/ESSID://;s/ dBm/dBm/;s/^ //;s/Signal //;s/Quality=//" | sort -r
+  exit 0
+fi
+
+if test "$1" = "--off"; then
+  sudo dhclient -r || sudo killall dhclient 2>/dev/null
+  sudo killall wpa_supplicant 2>/dev/null
+  sudo killall -9 wpa_supplicant 2>/dev/null
+  sudo ifconfig $IFACE down
+  exit 0
+fi
+
+# Reset interface cruft
+sudo dhclient -r || sudo killall dhclient 2>/dev/null
+sudo killall wpa_supplicant 2>/dev/null
+
+# Randomize hardware MAC address
+hwaddr=`dd if=/dev/urandom bs=1 count=3 2>/dev/null | od -w1  -A n -tx1 | tr -d '\n' | tr -d ' ' | sed -e 's/*/00/'`
+sudo ifconfig $IFACE down
+sudo ifconfig $IFACE hw ether "5cc5d4${hwaddr}"
+sleep 1
+
+# Bring up interface
+if test -n "$2"; then
+  wpa_passphrase "$1" "$2" >/tmp/.wpa
+  sudo iwconfig $IFACE essid "$1" && sleep 1
+  sudo wpa_supplicant -B -i$IFACE -c/tmp/.wpa && sleep 2 && sudo dhclient -v $IFACE && sudo ifconfig $IFACE up
+  rm -f /tmp/.wpa
+else
+  echo Open network
+  sudo iwconfig $IFACE essid "$1" && sleep 1
+  sudo dhclient -v $IFACE && sudo ifconfig $IFACE up
+fi

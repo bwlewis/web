@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><TITLE>illposed.net</TITLE>
+<link rel="shortcut icon" href="/approx.ico">
+</HEAD>
+<BODY width="90%" BGCOLOR="FFFFFF" link="111111" 
+alink="111111" vlink="111111">
+<basefont size="3" face="Helvetica">
+<h3>Where?</h3>
+Find the code here: <a href="http://github.com/bwlewis/R4P/">http://github.com/bwlewis/R4P</a>.
+<br>
+Find R here: <a href="http://www.r-project.org/">http://www.r-project.org</a>.
+<br>
+Find Processing here: <a href="http://processing.org/">http://processing.org</a>.
+<h3>What?</h3>
+R4P helps Processing and R interact.
+It's distributed as an R package, but includes both R and Processing parts
+and is generally designed to be used from Processing.
+<br><br>
+Processing programs invoke an
+R engine using the Java-R interface (JRI) from the 
+<a href="http://www.rforge.net/rJava/">rJava</a>
+R package.  Many Processing functions are exposed to R scripts through a 
+high-level interface function. Similarly, Processing programs may use
+R functions through the JRI interface.
+The package also includes a basic Processing output device for 
+R graphics.
+<br><br>
+R4P includes a few example sketches that are installed into your Processing
+sketchbook directory.
+<h3>Why?</h3>
+<ul>
+<li>
+Processing is really good for animation and interactive graphics; R not
+so much.
+</li>
+<li>
+R is fantastic for scientific computing and technical graphics; Processing
+not so much.
+</li>
+</ul>
+Thus, R4P tries to make the languages relatively easily interoperable
+to obtain a system good at technical interactive graphics, animation,
+and scientific computing.
+<p>
+One of the included examples is a re-implementation of the "boids"
+bird flocking simulation included in Processing. The new implementation
+computes the flock motion in R but displays it with Processing. It also
+shows how R can handle simple mouse interaction (the position of
+a repulsor/attractor), as well as compute
+flock density "contours." Contour plots, somewhat tricky
+to produce natively in Processing, are one-liners in R. The example plot
+was produced by R plotting to the Processing output device using:
+<br/><br/>
+<code>
+contour(X,col=5,nlevels=5,drawlabels=FALSE)
+</code>
+<br/><br/>
+The example may seem somewhat
+contrived, but it does illustrate combining nifty features of each language.
+A video of the example appears below:
+<p>
+<video width="600" height="400" controls>
+  <source src="boids.ogv" type='video/ogg; codecs="theora, vorbis"'>
+<font color="red"><b>
+Your browser does not support HTML 5 video. Upgrade to Firefox 3.5 or newer
+Chrome, or Opera!
+</b></font>
+</video>
+<br/>
+Note: if the above video does not display, try this link:
+<a href="http://illposed.net/boids.avi">http://illposed.net/boids.avi</a>.
+
+<h3>Doc</h3>
+The R package includes the following basic documentation:
+<br>
+<a href="./R4P/pdev.html">Basic Processing graphics device for R</a>
+<br>
+<a href="./R4P/Process.html">High-level Processing function interface for R</a>
+<h3>Warnings?</h3>
+<ul>
+<li>
+Right now, it's only set up for use with GNU/Linux, although it can easily be 
+extended to other platforms like Windows.
+</li>
+<li>
+Processing binaries are generally 32-bit programs (as of December '09).
+However, most folks run 64-bit versions of R. Due to the tight coupling
+of Processing and R in R4P, one must use bit-compatible versions of the
+languages. That usually means manually building a 64-bit version of
+Processing from source. Instructions may be found here:
+<a href="http://dev.processing.org/build/">http://dev.processing.org/build/</a>.
+Note that I've had trouble building certain parts of Processing on GNU/Linux;
+in particular OpenGL support.
+</li>
+<li>R4P is in infancy; expect issues and if capable, help to resolve them!
+Please feel free to contribute.</li>
+</ul>
+</li>
+
+</basefont>
+</body>
+</html>

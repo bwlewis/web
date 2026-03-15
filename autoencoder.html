@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>Notes on Predicting Fraud with Autoencoders and Keras (2018)</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+  pre.r {
+    background-color: #f1f1f1;
+  }
+</style>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type="text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+
+</div>
+
+
+<div id="notes-on-predicting-fraud-with-autoencoders-and-keras" class="section level1">
+<h1>Notes on ‘Predicting Fraud with Autoencoders and Keras’</h1>
+<p>I’ve been reading many of the the introductory Keras examples on the RStudio blog lately. I enjoyed the article ‘Predicting Fraud with Autoencoders and Keras’ (<a href="https://tensorflow.rstudio.com/blog/keras-fraud-autoencoder.html" class="uri">https://tensorflow.rstudio.com/blog/keras-fraud-autoencoder.html</a>) by Daniel Falbe for many reasons:</p>
+<ul>
+<li>models with imbalanced data are really interesting!</li>
+<li>‘autoencoder’-like models are interesting!</li>
+<li>the article does a great job of introducing complex workflows, including offloading operation to CloudML</li>
+</ul>
+<p>While working through the example, I couldn’t help but think of other ways to view the problem–some approaches quite similar to Falbe’s write up, others very different. I decided to implement some of those approaches. Thanks to R and R’s comprehensive package universe this is something that took only an afternoon.</p>
+<p>My hope is that this brief note may lead to a better understanding of the example and its modeling context.</p>
+<div id="the-problem" class="section level2">
+<h2>The problem</h2>
+<p>We’re given data with 284,807 observations of 31 variables, one of which is a binary 0/1 labeling variable named “Class.” The problem is, given the other 30 variables, predict the value of Class.</p>
+<p>Right off the bat logistic regression comes to mind! Indeed we will use that approach below. But the problem is slightly more subtle because the observation Class labels are not balanced–there are only 492 observations where Class equals 1. That leads to consideration of a few other approaches discussed below.</p>
+<p>The data are available from Kaggle here <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud" class="uri">https://www.kaggle.com/mlg-ulb/creditcardfraud</a>. They, very unfortunately, require that you sign up for Kaggle to access the data and the data can’t be freely re-distributed. See Daniel Falbe’s original blog post above for more discussion on the data.</p>
+<p>The rest of this note assumes that you’ve downloaded the “creditcard.csv” file from Kaggle and that it’s in your working directory.</p>
+<p>I will tend to avoid using too many package dependencies in these notes outside of those required for the models. Similarly to the original note, I will use the area under the ROC curve to evaluate model predictive output. Here is a support function that computes that from the nice ‘Metrics’ package. I’m repeating the function definition here to illustrate the computation. See also the <code>somers2()</code> function in Harrell’s Hmisc package for an alternative formulation.</p>
+<pre class="r"><code>auc = function (actual, predicted) 
+{
+  r = rank(predicted)
+  n_pos = as.numeric(sum(actual == 1))
+  n_neg = length(actual) - n_pos
+  (sum(r[actual == 1]) - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+}</code></pre>
+</div>
+<div id="reading-the-data" class="section level2">
+<h2>Reading the data</h2>
+<p>We omit the ‘Time’ variable as discussed in the original blog post, leaving a 284,807 row by 30 column data frame:</p>
+<pre class="r"><code>x = read.csv(&quot;creditcard.csv&quot;)[, -1] # omit first column, 'Time'</code></pre>
+<p>(Note although the R utils <code>read.csv()</code> function works fine here, it is slow. Consider using the <code>fread()</code> function from the ridiculously fast data.table package to read the file much more rapidly, or the <code>readr()</code> function as used in the original blog post.)</p>
+<p>We now have a 30 column data frame <code>x</code> with 29 continuous predictor variables and the Class label column that we want to predict.</p>
+</div>
+<div id="keras-autoencoder-model" class="section level2">
+<h2>Keras autoencoder model</h2>
+<p>This section repeats the model in Daniel Falbe’s original blog post, although relying on fewer external dependencies.</p>
+<p>The idea of this approach is to make a lossy projection in some subspace (that is, make a way to approximate the data) of only the majority <code>Class == 0</code> subset of the training data subset. Then apply the projection to all the data. Because the projection was defined only using the majority <code>Class == 0</code> case, we expect those observations to be well-approximated, and the <code>Class == 1</code> observations to be poorly approximated by this process. Thus, some measure of error in reconstructing each observation determines the prediction of Class.</p>
+<p>The Keras model requires that the data are presented in (dense) matrix form, without the Class label. The next section defines such a matrix creatively called <code>a</code> and an indexing variable <code>i</code> that splits the data by rows into model training and model testing subsets. Finally, we subtract the minimum value in the training subset from each column and then divide by the range within each column in the training set to scale all values to the interval [0, 1] following the same scaling used in the original blog post.</p>
+<p>Note that the ranges and minima are defined in the training subset only. That’s because we don’t want to snoop around in the testing set, treating that when we get to it as something we’ve never seen before to keep the prediction honest.</p>
+<pre class="r"><code>i = seq(nrow(x)) &lt;= 200000 # train/test split
+a = as.matrix(x[, 1:29])
+a = sweep(a, 2, apply(a[i, ], 2, min), '-')
+a = sweep(a, 2, apply(a[i, ], 2, function(x) diff(range(x))), '/')</code></pre>
+<p>Now define and fit the Keras autoencoder model as in the original blog post (this requires that the keras package is installed and set up on your system):</p>
+<pre class="r"><code>library(keras)
+model = keras_model_sequential()
+model %&gt;%
+  layer_dense(units = 15, activation = &quot;tanh&quot;, input_shape = ncol(a)) %&gt;%
+  layer_dense(units = 10, activation = &quot;tanh&quot;) %&gt;%
+  layer_dense(units = 15, activation = &quot;tanh&quot;) %&gt;%
+  layer_dense(units = ncol(a)) %&gt;%
+  compile(
+    loss = &quot;mean_squared_error&quot;, 
+    optimizer = &quot;adam&quot;
+  )
+
+early_stopping = callback_early_stopping(patience = 5)
+tkeras = system.time({model %&gt;% fit(
+  x = a[i &amp; x$Class == 0, ], 
+  y = a[i &amp; x$Class == 0, ], 
+  epochs = 100, 
+  batch_size = 32,
+  validation_data = list(a[!i &amp; x$Class == 0, ], a[!i &amp; x$Class == 0, ]), 
+  callbacks = list(early_stopping)
+)})</code></pre>
+<p>And make predictions for the training and testing subsets using the model:</p>
+<pre class="r"><code>pred_train = predict(model, a[i, ])
+mse_train = apply((a[i, ] - pred_train)^2, 1, sum)
+pred_test = predict(model, a[!i, ])
+mse_test = apply((a[!i, ] - pred_test)^2, 1, sum)</code></pre>
+<p>Something that surprised me at this point is how much computational effort this model required (a lot).</p>
+</div>
+<div id="svd-based-projection" class="section level2">
+<h2>SVD-based projection</h2>
+<p>Instead of using a deep neural network above, we can try the same approach but with a projection into a truncated SVD basis. Specifically,</p>
+<ol style="list-style-type: decimal">
+<li>compute the SVD of the training model matrix restricted to the <code>Class == 0</code> cases</li>
+<li>Pick a lower-dimension <code>N</code> to project into</li>
+<li>Form an <code>N</code>-dimensional SVD projection of all the data</li>
+<li>Evaluate reconstruction error between each original observation (row) and its low-dimensional approximation</li>
+</ol>
+<p>It’s literally the same idea as the Keras approach above, but with an SVD instead of a neural network. This idea has been around for a long time, see examples of it for images in Chapter 14 of “Elements of Statistical Learning” (Friedman, Jerome, Trevor Hastie, and Robert Tibshirani. The elements of statistical learning. Vol. 1. New York: Springer series in statistics, 2001.).</p>
+<p>And, there is a more direct connection between the neural network and SVD approaches, see for instance this paper Bourlard, H, and Yves Kamp. “Auto-association by multilayer perceptrons and singular value decomposition.” Biological cybernetics 59.4-5 (1988): 291-294. A hand-wavy discussion of the connection is that regularized neural networks shrink to a linear representation, which in this example can give us something like the SVD projection.</p>
+<p>It’s worth pointing out that one can imagine many other such projection methods (other than the SVD)!</p>
+<p>OK, let’s see how we might implement this in R, using the same model matrix <code>a</code> used by the Keras model. The example code below computes the projection then picks a good dimension to project into using auc on the training subset, and then finally evaluates predictions (in the form of reconstruction errors) for both the training and testing subsets.</p>
+<pre class="r"><code>tsvd = system.time({
+  s0 = svd(a[i &amp; x$Class == 0, ])
+  anrm = apply(a[i, ], 1, crossprod)  # squared row norms
+  proj = rep(0, length(anrm))  # projected squared row norms
+  s = rep(0, 20)
+  for(N in seq(20))
+  {
+    proj = proj + apply(a[i, ] %*% s0$v[, N], 1, crossprod)
+    s[N] = auc(x$Class[i], anrm - proj)
+  }
+  N = which.max(s) # pick best dimension for training subset auc
+})
+svd_mse_train = anrm - apply(a[i, ] %*% s0$v[, 1:N], 1, crossprod)
+svd_mse_test = apply(a[!i, ], 1, crossprod) - apply(a[!i, ] %*% s0$v[, 1:N], 1, crossprod)</code></pre>
+</div>
+<div id="the-usual-pca-projection" class="section level2">
+<h2>The usual PCA projection</h2>
+<p>It turns out that we can do a little better than the SVD projection above by using just the normal comlumn-centering to compute standard principal components (PCA) instead of the unusual scaling in the <code>a</code> matrix used by the Keras model. Other than the input matrix centering/scaling, this is identical to the SVD model above.</p>
+<pre class="r"><code>b = as.matrix(x[, 1:29])
+b = sweep(b, 2, apply(b[i, ], 2, mean), '-')
+tpca = system.time({
+  s0 = svd(b[i &amp; x$Class == 0, ])
+  nrm = apply(b[i, ], 1, crossprod)  # squared row norms
+  proj = rep(0, length(nrm))  # projected squared row norms
+  s = rep(0, 20)
+  for(N in seq(20))
+  {
+    proj = proj + apply(b[i, ] %*% s0$v[, N], 1, crossprod)
+    s[N] = auc(x$Class[i], nrm - proj)
+  }
+  N = which.max(s) # best dimension for training set auc
+})
+pca_mse_train = nrm - apply(b[i, ] %*% s0$v[, 1:N], 1, crossprod)
+pca_mse_test = apply(b[!i, ], 1, crossprod) - apply(b[!i, ] %*% s0$v[, 1:N], 1, crossprod)</code></pre>
+</div>
+<div id="logistic-regression-abridged" class="section level2">
+<h2>Logistic regression, abridged</h2>
+<p>Wow, all this seems rather complicated! What about simple, basic, logistic regression? Indeed we can try that too! The example code below builds a logistic model on the original data, not the transformed data used by SVD and Keras above.</p>
+<pre class="r"><code>tglm = system.time({glm_raw = glm(Class ~ ., data=x[i, ], family=binomial)})</code></pre>
+<p>Well that was easy!</p>
+</div>
+<div id="logistic-regression" class="section level2">
+<h2>Logistic regression</h2>
+<p>Logistic regression with unbalanced outcomes can be problematic. The details are subtle but the gist is that small sample sizes bias estimates. Surprisingly, even large absolute numbers of samples with badly imbalanced ratios can lead to problems. See for example the very influential paper by King and Zeng available here <a href="http://gking.harvard.edu/files/0s.pdf" class="uri">http://gking.harvard.edu/files/0s.pdf</a> (King, Gary, and Langche Zeng. “Logistic regression in rare events data.” Political analysis 9.2 (2001): 137-163.).</p>
+<p>King and Zeng propose simple (computationally, not theoretically) remedies to correct for imbalanced data in logistic regression. And, of course, there is a function (<code>relogit()</code>) in an R package (Zelig) reflecting their work!</p>
+<p>Let’s try this approach out. It’s the same logistic regression as above, but applying a correction for the rarity of the <code>Class == 1</code> events. The code below assumes that you’ve installed the <code>Zelig</code> package from CRAN. It’s almost another one-liner to use:</p>
+<pre class="r"><code>library(Zelig)
+train = x[i, ]
+tz = system.time({z = from_zelig_model(zelig(Class ~ ., data=train, model=&quot;relogit&quot;))})
+z$fitted.values = z$fitted.values[1, ] # make output conform to normal R glm output</code></pre>
+<p>Note, unfortunately the <code>zelig()</code> function does not understand subsetting I think maybe because the output refers to datasets by variable name in the enclosing environment. So we need to explicitly create a named training subset variable <code>train</code> above.</p>
+</div>
+<div id="deep-neural-network-class-prediction" class="section level2">
+<h2>Deep neural network class prediction</h2>
+<p>Deep neural networks are perfectly capable of logistic-like regression for class prediction (indeed, that may be their primary use!). Why not try that approach here? Perhaps the imbalance in the Class variable might throw a monkey-wrench into the works, but we can easily try it anyway!</p>
+<pre class="r"><code>tmodel2 = system.time(
+{
+model2 = keras_model_sequential()
+model2 %&gt;%
+  layer_dense(units = 15, activation = &quot;relu&quot;, input_shape = ncol(a)) %&gt;%
+  layer_dropout(rate = 0.1) %&gt;%
+  layer_dense(units = 15, activation=&quot;relu&quot;) %&gt;%
+  layer_dense(units = 1,  kernel_initializer=&quot;uniform&quot;, activation=&quot;sigmoid&quot;) %&gt;%
+  compile(
+    loss = &quot;binary_crossentropy&quot;, 
+    optimizer = &quot;adam&quot;
+  )
+model2 %&gt;% fit(x = a[i, ],
+               y = x$Class[i],
+               epochs = 50, batch_size=32, 
+               callbacks = callback_early_stopping(patience = 5, monitor=&quot;loss&quot;))
+})
+model2_test_pred = predict(model2, a[!i, ])
+model2_train_pred = predict(model2, a[i, ])</code></pre>
+<p>Note that this model, unlike the autoencoder approach above, explicitly uses the training subset Class labels (the <code>y</code> variable above). The layers are different, using the <code>relu</code> nonlinear function and a different model objective loss function (binary cross entropy). The output layer is logistic (sigmoid). And I added a regularizing dropout layer, because that often seems to help such models in practice.</p>
+<p>If this seems hand-wavy, it is. I don’t yet really understand layer engineering in deep neural networks. I’m just following a pattern from other examples with only superficial understanding, sorry. (Please improve this!)</p>
+</div>
+<div id="gradient-boosted-trees" class="section level2">
+<h2>Gradient boosted trees</h2>
+<p>Finally, let’s try xgboost on this problem. Gradient boosted trees are among the most successful (and speedy) approaches to solving generic problems like this. This example code assumes that you’ve installed the xgboost package from CRAN. Similarly to the Keras package, xgboost requires a matrix-like input, defined as the <code>dtrain</code> and <code>dtest</code> variables below.</p>
+<pre class="r"><code>library(xgboost)
+dtrain = xgb.DMatrix(as.matrix(x[i, -30]), label = x$Class[i])
+dtest = xgb.DMatrix(as.matrix(x[!i, -30]), label = x$Class[!i])
+watchlist = list(eval=dtest, train=dtrain)
+param = list(max_depth=5, silent=1, nthread=4, objective=&quot;binary:logistic&quot;, eval_metric=&quot;auc&quot;)
+txgb = system.time({bst=xgb.train(param, dtrain, nrounds=50, watchlist)})</code></pre>
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<p>The notes above construct seven example models falling in three broad classes.</p>
+<ol style="list-style-type: decimal">
+<li>The Keras autoencoder, SVD and PCA projection models evaluate approximation error to make predictions.</li>
+<li>R’s <code>glm()</code>, Zelig’s <code>zelig()/relogit()</code> and the Keras classifier are all versions of logistic regression.</li>
+<li>xgboost is a classification tree method with gradient boosting and other enhancements.</li>
+</ol>
+<p>Let’s compare the auc output for all of them, with the results below shown for my home PC with an AMD A10-7850K quad-core 3700 MHz CPU and 16 GB of DDR3 synchronous, unbuffered 1333 MHz RAM running Ubuntu 16.04 and R version 3.4.2 linked to OpenBLAS/OpenMP (based on Goto BLAS) r0.3.0 (the <code>OMP_NUM_CORES</code> variable was unset, so using all four cores when possible).</p>
+<pre class="r"><code>(ans = data.frame(
+  keras_autoenc=c(auc(x$Class[i], mse_train), auc(x$Class[!i], mse_test), tkeras[[3]]),
+  svd=c(auc(x$Class[i], svd_mse_train), auc(x$Class[!i], svd_mse_test), tsvd[[3]]),
+  pca=c(auc(x$Class[i], pca_mse_train), auc(x$Class[!i], pca_mse_test), tpca[[3]]),
+  keras_class=c(auc(x$Class[i], model2_train_pred),
+                auc(x$Class[!i], model2_test_pred), tmodel2[[3]]),
+  glm=c(auc(x$Class[i], glm_raw$fitted.values),
+        auc(x$Class[!i], predict(glm_raw, newdata=x[!i, ], type=&quot;response&quot;)),
+        tglm[[3]]),
+  relogit=c(auc(x$Class[i], z$fitted.values),
+            auc(x$Class[!i], predict(z, newdata=x[!i,], type=&quot;response&quot;)),
+            tz[[3]]),
+  xgboost=c(auc(x$Class[i], predict(bst, newdata=dtrain)),
+            auc(x$Class[!i], predict(bst, newdata=dtest)), txgb[[3]]),
+  row.names=c(&quot;train&quot;, &quot;test&quot;, &quot;time (s)&quot;)))</code></pre>
+<pre><code>         keras_autoenc        svd        pca keras_class       glm   relogit    xgboost
+train        0.9534376  0.9598296  0.9701504   0.9807703 0.9795944 0.9802531  0.9999994
+test         0.9501812  0.9517164  0.9615752   0.9830711 0.9703825 0.9710923  0.9801911
+time (s)   146.5280000 24.6860000 24.2190000 698.7410000 6.3830000 9.1860000 15.4850000</code></pre>
+<p>All the methods perform admirably on these data. Perhaps not surprisingly, they kind of group together. The projection/approximation error methods are quite similar, as are the three logistic-like approaches–at least on the training subset. The Keras classifier model outperforms all others on the testing subset (which is of course, what really matters!). Finally the xgboost model exhibits a ridiculously high auc on the training subset, but slightly lower auc on the testing subset to the Keras classifier above.</p>
+<p>Please, take all these outputs with several grains of salt. I am no expert at tuning parameters of xgboost nor in layer engineering required of the Keras logistic classifier. I’m simply presenting this comparison to illustrate several related but distinct ways to approach this problem. Moreover these results show only one data splitting and one run. In particular, I noticed that the Keras runs (with the same data splitting) auc output varies sometimes considerably from run to run.</p>
+<p>I will say that I think that the computational effort required by deep neural networks seems excessive to me. The time to compute the model is a proxy for the amount of work done, since all the methods are free to take advantage of all the four CPU cores in this test (and they mostly do).</p>
+</div>
+</div>
+
+
+
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><TITLE>SHIM File system</TITLE>
+<link rel="shortcut icon" href="/approx.ico">
+</HEAD>
+<BODY width="90%" BGCOLOR="FFFFFF" link="111111" 
+alink="111111" vlink="111111">
+<basefont size="3" face="Helvetica">
+<h2>Where?</h2>
+Find the code here: <a href="http://github.com/bwlewis/shim/">http://github.com/bwlewis/shim</a>.
+<br>
+Find PVFS2 here: <a href="http://PVFS.org/">http://PVFS.org/</a>.
+<h2>What?</h2>
+A shim file system for Linux (work in progress).
+<br/><br/>
+Shim provides a simple way
+to add basic memory mapping capability to almost any file system, without 
+tinkering with the file system itself.
+<br/><br/>
+The shim module defines an intermediary file system for the Linux
+kernel that sits between applications and an underlying file system. The shim
+module implements address space operations on its files as read and write
+operations on corresponding backing files in the underlying file system. 
+We wrote shim to allow us to memory map files in a PVFS2 file system.
+Although we wrote shim
+with PVFS2 in mind, it can be used with any underlying file system that
+supports read and write operations.
+<br/><br/>
+<h2>Why would one want this?</h2>
+Memory mapped files are often quite useful, but not every file system
+supports file mapping. Consider, for example, the PVFS2 file system. PVFS2
+is an elegant, high-performance, parallel file system. It allows one to
+aggregate storage across multiple networked computers into a parallel
+file system simultaneously usable by multiple clients.
+<br/><br/>
+PVFS2 is focused intensely on performance, especially in HPC settings and
+for applications using MPI. More general purpose capabilities like memory
+mapped files are left out by design. The shim file system provides basic memory
+mapped file support on top of existing installations of PVFS2 without requiring
+modification of PVFS2 code or settings. The following example inspired
+the name shim.
+<h3>Example: Parallel Virtual Shared Memory with PVFS2</h3>
+Let's say we have a small cluster of GNU/Linux nodes, and a problem
+that would benefit from the ability to access very large amounts of relatively
+fast memory from RAM. We can use PVFS2 and shim to provide a virtual pool
+of RAM from across the cluster as follows:
+<ol>
+<li>Configure PVFS2 across the cluster, using <tt>/dev/shm</tt> 
+on each node as a backing store.</li>
+<li>Mount the PVFS2 file system on one or more nodes.</li>
+<li>Copy the problem data into the PVFS2 directory.</li>
+<li>Mount the shim file system on one or more nodes.</li>
+<li>Programs running on the nodes mounting shim may now memory-map the
+problem data (something not possible with PVFS2).</li>
+</ol>
+<br/><br/>
+Of course, the real benefit of a system like PVFS2 is to allow high-performance
+parallel use of memory. The shim file system does not explicitly coordinate
+parallel access to memory from multiple processes. It does not enforce
+cache consistency, and memory-mapped read/write operations are granular (at
+the page level). However, shim
+does provide tools that help client applications manage cache state on their
+own. See the README document in the source code directory for more information.
+<br/><br/>
+</basefont>
+</body>
+</html>

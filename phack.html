@@ -1,5 +1,4 @@
 <html>
-
 <style>
   * {
     box-sizing: border-box;
@@ -9,6 +8,7 @@
   body {
     margin: 0;
     padding: 0;
+    font-size: 1.2em;
   }
 
   body {
@@ -147,22 +147,26 @@
     margin-top: 20px;
   }
 
-  .chart-card {
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-  }
+.chart-card {
+  background: white;
+  padding: 8px 10px 4px 10px; /* Reduced from 15px */
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  .chart-title {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #1e293b;
-    margin-bottom: 4px;
-    text-align: center;
-    white-space: pre-line;
-  }
+.chart-title {
+  font-size: 0.85rem; /* Reduced from 1rem */
+  font-weight: bold;
+  color: #1e293b;
+  margin-bottom: 2px;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.2;
+}
 
   .chart-subtitle {
     font-size: 0.85rem;
@@ -198,19 +202,56 @@
   }
 </style>
 
-<!-- Load D3.js v7 -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
-
 <body>
+<h1> Spurious correlation, p-hacking, and gardens of forking paths </h1>
 
-<h1> P-hacking demo </h1>
+<a href="https://en.wikipedia.org/wiki/Spurious_relationship">Wikipedia says:</a>
+
+<blockquote>
+A spurious correlation is a
+mathematical relationship in which two or more events or variables are
+associated but not causally related, due to either coincidence or the presence
+of a certain third, unseen factor (referred to as a confounding factor or
+latent variable).
+</blockquote>
+
+<p>
+Tyler Vigen famously illustrates hilarious spurious correlations here:
+<a href="https://tylervigen.com/spurious-correlations">https://tylervigen.com/spurious-correlations</a>.
+For instance, "butter consumption" is highly correlated to the number of doctors in Colorado!
+</p>
+
+<p>
+But spurious correlation is not always funny. It can occur intentionally and accidentally:
+<ul>
+<li>P-hacking: Intentionally testing many combinations of variables, dropping data, or altering analyses until an artificially "statistically significant" result is found.
+<li>The Garden of Forking Paths: Unintentionally finding patterns by making analysis choices <i>after</i> seeing the data, unwittingly inflating the chance of finding a random false positive.
+</ul>
+Sadly, both kinds regularly occur in the media and even the scientific literature.
+</p>
+
+<p>
+Spurious correlation is <i>likely</i> to happen whenever you have lots of variables
+and few observations (it can occur other times too). As a general rule, whenever this
+situation occurs beware of possible spurious correlation.
+</p>
+
+<h2>Instructions</h2>
+<p>
+Break up into groups of 4 to 6 people. For your group,
+fill in the table below by asking each person in the group the question. <b>Make sure
+all answers are numbers.</b>
+</p>
+<p>
+When you're done, press the "Plot Top 9 Correlations" button to see the results for your group!
+</p>
+
 
 <div class="btn-container">
-  <button id="fill-btn" class="fill-btn">Fill Example Data</button>
   <button id="calc-btn" class="calc-btn">Plot Top 9 Correlations</button>
 </div>
 
-<!-- Results section placed above the table -->
 <div id="results-container" style="display: none;">
   <h2>Top 9 Strongest Correlations</h2>
   <div id="charts-grid" class="charts-grid"></div>
@@ -252,7 +293,7 @@
     <tr>
       <td> What's your favorite color? (ROYGBIV = 1234567) <td><td><td><td><td><td>
     <tr>
-      <td> Do you like scary movies better than action movies?  <td><td><td><td><td><td>
+      <td> How many unread emails are sitting in your email inbox?  <td><td><td><td><td><td>
     <tr>
       <td> How many pets have you ever owned (all time)?  <td><td><td><td><td><td>
     <tr>
@@ -359,11 +400,9 @@
     }
   });
 
-  // --- Example Data Generator ---
 
-  document.getElementById("fill-btn").addEventListener("click", () => {
+  const fill = function() {
     const tableRows = [...table.tBodies[0].rows];
-    
     const ranges = [
       [60, 76],   // Height (in)
       [6, 13],    // Shoe size
@@ -377,7 +416,7 @@
       [2, 12],    // Screen time
       [1, 31],    // Birth day
       [1, 7],     // Favorite color
-      [0, 1],     // Scary vs Action
+      [0, 100],   // unread email
       [0, 8],     // Pets owned
       [1, 12],    // Birth month
       [1, 15],    // Countries visited
@@ -396,14 +435,11 @@
         row.cells[colIndex].innerText = randomVal;
       }
     });
-  });
-
-  // --- Statistical Functions ---
+  };
 
   function pearsonCorrelation(x, y) {
     const n = x.length;
     if (n === 0 || n !== y.length) return NaN;
-
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
     for (let i = 0; i < n; i++) {
       sumX += x[i];
@@ -412,10 +448,8 @@
       sumX2 += x[i] * x[i];
       sumY2 += y[i] * y[i];
     }
-
     const numerator = (n * sumXY) - (sumX * sumY);
     const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
-
     if (denominator === 0) return NaN;
     return numerator / denominator;
   }
@@ -434,101 +468,78 @@
     return { slope, intercept };
   }
 
-  // --- Render Chart with D3 ---
+function renderD3ScatterPlot(container, item, rank) {
+  // Reduced margins to give more plotting area to axes and points
+  const margin = { top: 8, right: 15, bottom: 28, left: 35 };
+  const width = 340 - margin.left - margin.right;
+  const height = 220 - margin.top - margin.bottom;
 
-  function renderD3ScatterPlot(container, item, rank) {
-    const margin = { top: 10, right: 20, bottom: 45, left: 55 };
-    const width = 340 - margin.left - margin.right;
-    const height = 220 - margin.top - margin.bottom;
+  const card = d3.select(container)
+    .append("div")
+    .attr("class", "chart-card");
 
-    const card = d3.select(container)
-      .append("div")
-      .attr("class", "chart-card");
+  card.append("div")
+    .attr("class", "chart-title")
+    .text(`${item.var1} \nversus\n ${item.var2}`);
 
-    card.append("div")
-      .attr("class", "chart-title")
-      .text(`${item.var1} \nversus\n ${item.var2}`);
+  const svg = card.append("svg")
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
-//    card.append("div")
-//      .attr("class", "chart-subtitle")
-//      .text(`#${rank}: r = ${item.correlation.toFixed(3)}`);
+  const xExtent = d3.extent(item.points, d => d.x);
+  const yExtent = d3.extent(item.points, d => d.y);
 
-    const svg = card.append("svg")
-      .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+  // Add 5% padding so edge points aren't cut off by the axes
+  const xDiff = (xExtent[1] - xExtent[0]) || 1;
+  const yDiff = (yExtent[1] - yExtent[0]) || 1;
+  const xPadding = xDiff * 0.05;
+  const yPadding = yDiff * 0.05;
 
-    // Domains
-    const xExtent = d3.extent(item.points, d => d.x);
-    const yExtent = d3.extent(item.points, d => d.y);
+  const xScale = d3.scaleLinear()
+    .domain([xExtent[0] - xPadding, xExtent[1] + xPadding])
+    .range([0, width]);
 
-    const xPadding = (xExtent[1] - xExtent[0]) * 0.1 || 1;
-    const yPadding = (yExtent[1] - yExtent[0]) * 0.1 || 1;
+  const yScale = d3.scaleLinear()
+    .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
+    .range([height, 0]);
 
-    // Scales
-    const xScale = d3.scaleLinear()
-      .domain([xExtent[0] - xPadding, xExtent[1] + xPadding])
-      .range([0, width]);
+  svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(xScale).ticks(5));
 
-    const yScale = d3.scaleLinear()
-      .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
-      .range([height, 0]);
+  svg.append("g")
+    .call(d3.axisLeft(yScale).ticks(5));
 
-    // Axes
-    svg.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(xScale).ticks(5));
+  const { slope, intercept } = linearRegression(item.points);
+  const xMin = xExtent[0] - xPadding;
+  const xMax = xExtent[1] + xPadding;
 
-    svg.append("g")
-      .call(d3.axisLeft(yScale).ticks(5));
+  svg.append("line")
+    .attr("x1", xScale(xMin))
+    .attr("y1", yScale(slope * xMin + intercept))
+    .attr("x2", xScale(xMax))
+    .attr("y2", yScale(slope * xMax + intercept))
+    .attr("stroke", "#dc2626")
+    .attr("stroke-width", 2);
 
-    // X Axis Label
-    svg.append("text")
-      .attr("class", "axis-label")
-      .attr("text-anchor", "middle")
-      .attr("x", width / 2)
-      .attr("y", height + 36)
-      .text(item.var1.length > 35 ? item.var1.substring(0, 32) + "..." : item.var1);
+  svg.selectAll("circle")
+    .data(item.points)
+    .enter()
+    .append("circle")
+    .attr("cx", d => xScale(d.x))
+    .attr("cy", d => yScale(d.y))
+    .attr("r", 5)
+    .attr("fill", "#2563eb")
+    .attr("opacity", 0.8);
+}
 
-    // Y Axis Label
-    svg.append("text")
-      .attr("class", "axis-label")
-      .attr("text-anchor", "middle")
-      .attr("transform", "rotate(-90)")
-      .attr("y", -40)
-      .attr("x", -height / 2)
-      .text(item.var2.length > 35 ? item.var2.substring(0, 32) + "..." : item.var2);
-
-    // Trend Line
-    const { slope, intercept } = linearRegression(item.points);
-    const xMin = xExtent[0] - xPadding;
-    const xMax = xExtent[1] + xPadding;
-
-    svg.append("line")
-      .attr("x1", xScale(xMin))
-      .attr("y1", yScale(slope * xMin + intercept))
-      .attr("x2", xScale(xMax))
-      .attr("y2", yScale(slope * xMax + intercept))
-      .attr("stroke", "#dc2626")
-      .attr("stroke-width", 2);
-
-    // Scatter Data Points
-    svg.selectAll("circle")
-      .data(item.points)
-      .enter()
-      .append("circle")
-      .attr("cx", d => xScale(d.x))
-      .attr("cy", d => yScale(d.y))
-      .attr("r", 5)
-      .attr("fill", "#2563eb")
-      .attr("opacity", 0.8);
-  }
 
   document.getElementById("calc-btn").addEventListener("click", () => {
     const tableRows = [...table.tBodies[0].rows];
     const rowData = [];
-
-    // Extract row data into Float64 arrays
     tableRows.forEach(row => {
       const questionText = row.cells[0].innerText.trim();
       const values = [];
@@ -544,8 +555,6 @@
 
     const n = rowData.length;
     const pairwiseResults = [];
-
-    // Compute pairwise correlations
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
         const x = rowData[i].vector;
@@ -562,7 +571,6 @@
             validY.push(y[k]);
           }
         }
-
         const corr = pearsonCorrelation(validX, validY);
         if (!isNaN(corr)) {
           pairwiseResults.push({
@@ -574,8 +582,6 @@
         }
       }
     }
-
-    // Sort descending by magnitude and select top 9
     pairwiseResults.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
     const top9 = pairwiseResults.slice(0, 9);
 
@@ -583,15 +589,13 @@
     const chartsGrid = document.getElementById("charts-grid");
     chartsGrid.innerHTML = "";
     resultsContainer.style.display = "block";
-
     top9.forEach((item, index) => {
       renderD3ScatterPlot(chartsGrid, item, index + 1);
     });
-
-    // Smooth scroll to results
     resultsContainer.scrollIntoView({ behavior: "smooth" });
   });
 </script>
 
+<button onclick="fill();">Fill with fake data</button>
 </body>
 </html>

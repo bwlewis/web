@@ -1,0 +1,597 @@
+<html>
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: #f4f6f8;
+    color: #202124;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    padding: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 12px rgb(0 0 0 / 10%);
+    margin-bottom: 2rem;
+  }
+
+  th,
+  td {
+    padding: 0.75rem;
+    border-right: 1px solid #d9e0e7;
+    border-bottom: 1px solid #d9e0e7;
+    vertical-align: middle;
+    line-height: 1.35;
+  }
+
+  th:last-child,
+  td:last-child {
+    border-right: 0;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #263b53;
+    color: white;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  thead th:first-child {
+    text-align: left;
+  }
+
+  th:first-child,
+  td:first-child {
+    width: 34%;
+    text-align: left;
+  }
+
+  th:not(:first-child),
+  td:not(:first-child) {
+    width: 11%;
+    text-align: center;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  tbody tr:hover {
+    background: #eef6ff;
+  }
+
+  td[contenteditable="true"] {
+    min-height: 2.75rem;
+    background: #fffdf0;
+    cursor: text;
+  }
+
+  td[contenteditable="true"]:focus {
+    outline: 3px solid #60a5fa;
+    outline-offset: -3px;
+    background: white;
+  }
+
+  .btn-container {
+    margin: 20px 0;
+    display: flex;
+    gap: 12px;
+  }
+
+  .calc-btn {
+    background-color: #2563eb;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    transition: background-color 0.2s ease;
+  }
+
+  .calc-btn:hover {
+    background-color: #1d4ed8;
+  }
+
+  .fill-btn {
+    background-color: #475569;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    transition: background-color 0.2s ease;
+  }
+
+  .fill-btn:hover {
+    background-color: #334155;
+  }
+
+  #results-container {
+    margin-bottom: 30px;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .chart-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  }
+
+  .chart-title {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #1e293b;
+    margin-bottom: 4px;
+    text-align: center;
+    white-space: pre-line;
+  }
+
+  .chart-subtitle {
+    font-size: 0.85rem;
+    color: #2563eb;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .axis-label {
+    font-size: 11px;
+    fill: #475569;
+  }
+
+  @media (max-width: 1024px) {
+    .charts-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 700px) {
+    body {
+      overflow-x: auto;
+    }
+
+    table {
+      min-width: 850px;
+    }
+
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<!-- Load D3.js v7 -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<body>
+
+<h1> P-hacking demo </h1>
+
+<div class="btn-container">
+  <button id="fill-btn" class="fill-btn">Fill Example Data</button>
+  <button id="calc-btn" class="calc-btn">Plot Top 9 Correlations</button>
+</div>
+
+<!-- Results section placed above the table -->
+<div id="results-container" style="display: none;">
+  <h2>Top 9 Strongest Correlations</h2>
+  <div id="charts-grid" class="charts-grid"></div>
+</div>
+
+<table id="question-table">
+  <thead>
+    <tr>
+      <th>Question
+      <th>Person 1
+      <th>Person 2
+      <th>Person 3
+      <th>Person 4
+      <th>Person 5
+      <th>Person 6
+  <tbody>
+    <tr>
+      <td> What is your height in inches?  <td><td><td><td><td><td>
+    <tr>
+      <td> What's your shoe size?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many siblings do you have?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many letters are in your last name?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many stuffed animals have you ever owned?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many letters are in your first name?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many movies have you watched in the last year?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many classes are you taking this semster?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many hours did you sleep last night?  <td><td><td><td><td><td>
+    <tr>
+      <td> About how many hours per day do you look at a screen?  <td><td><td><td><td><td>
+    <tr>
+      <td> What's your birth day (number)?  <td><td><td><td><td><td>
+    <tr>
+      <td> What's your favorite color? (ROYGBIV = 1234567) <td><td><td><td><td><td>
+    <tr>
+      <td> Do you like scary movies better than action movies?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many pets have you ever owned (all time)?  <td><td><td><td><td><td>
+    <tr>
+      <td> What's your birth month (number)?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many countries have you visited?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many cousins do you have?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many vowels are in your last name?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many keys are on your keychain?  <td><td><td><td><td><td>
+    <tr>
+      <td> On a scale of 1 (wimpy) to 10 (inferno), how spicy do you like your food?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many classes are you taking this semster?  <td><td><td><td><td><td>
+    <tr>
+      <td> How many countries can you name in 30 seconds?  <td><td><td><td><td><td>
+</table>
+
+<script>
+  const table = document.querySelector("#question-table");
+  const style = document.createElement("style");
+  style.textContent = `
+    #question-table td.answer-cell {
+      min-height: 2.75rem;
+      background: #fffdf0;
+      cursor: text;
+      transition: background-color 0.12s, box-shadow 0.12s;
+    }
+    #question-table td.answer-cell.active-cell {
+      background: #ffffff;
+      box-shadow: inset 0 0 0 3px #4285f4;
+      outline: none;
+    }
+  `;
+  document.head.appendChild(style);
+  const rows = [...table.tBodies[0].rows].map(row => {
+    const cells = [...row.cells].slice(1);
+    cells.forEach(cell => {
+      cell.classList.add("answer-cell");
+      cell.contentEditable = "true";
+      cell.tabIndex = 0;
+      cell.spellcheck = false;
+    });
+    return cells;
+  });
+
+  function getCell(node) {
+    if (!node) return null;
+    const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    const cell = element.closest?.("td");
+    return cell?.classList.contains("answer-cell") ? cell : null;
+  }
+
+  function getCurrentCell() {
+    const selection = window.getSelection();
+    return getCell(selection?.anchorNode) || getCell(document.activeElement);
+  }
+
+  function setActiveCell(cell) {
+    table.querySelectorAll(".active-cell").forEach(previous => {
+      previous.classList.remove("active-cell");
+    });
+    cell.classList.add("active-cell");
+  }
+
+  function focusCell(cell) {
+    cell.focus();
+    setActiveCell(cell);
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  table.addEventListener("focusin", event => {
+    const cell = getCell(event.target);
+    if (cell) setActiveCell(cell);
+  });
+
+  table.addEventListener("keydown", event => {
+    const direction = {
+      ArrowLeft:  [0, -1],
+      ArrowRight: [0,  1],
+      ArrowUp:    [-1, 0],
+      ArrowDown:  [1,  0]
+    }[event.key];
+
+    if (!direction) return;
+    const current = getCurrentCell();
+    if (!current) return;
+    const rowIndex = rows.findIndex(row => row.includes(current));
+    const columnIndex = rows[rowIndex]?.indexOf(current);
+    if (rowIndex < 0 || columnIndex < 0) return;
+    const nextRow = rowIndex + direction[0];
+    const nextColumn = columnIndex + direction[1];
+    const next = rows[nextRow]?.[nextColumn];
+    if (next) {
+      event.preventDefault();
+      focusCell(next);
+    }
+  });
+
+  // --- Example Data Generator ---
+
+  document.getElementById("fill-btn").addEventListener("click", () => {
+    const tableRows = [...table.tBodies[0].rows];
+    
+    const ranges = [
+      [60, 76],   // Height (in)
+      [6, 13],    // Shoe size
+      [0, 4],     // Siblings
+      [3, 10],    // Letters in last name
+      [0, 25],    // Stuffed animals
+      [3, 9],     // Letters in first name
+      [5, 50],    // Movies watched
+      [3, 6],     // Classes taking
+      [4, 10],    // Sleep hours
+      [2, 12],    // Screen time
+      [1, 31],    // Birth day
+      [1, 7],     // Favorite color
+      [0, 1],     // Scary vs Action
+      [0, 8],     // Pets owned
+      [1, 12],    // Birth month
+      [1, 15],    // Countries visited
+      [0, 20],    // Cousins
+      [1, 5],     // Vowels in last name
+      [1, 10],    // Keys on keychain
+      [1, 10],    // Spicy rating
+      [3, 6],     // Classes taking
+      [5, 20]     // Countries named
+    ];
+
+    tableRows.forEach((row, rowIndex) => {
+      const [min, max] = ranges[rowIndex] || [1, 10];
+      for (let colIndex = 1; colIndex < row.cells.length; colIndex++) {
+        const randomVal = Math.floor(Math.random() * (max - min + 1)) + min;
+        row.cells[colIndex].innerText = randomVal;
+      }
+    });
+  });
+
+  // --- Statistical Functions ---
+
+  function pearsonCorrelation(x, y) {
+    const n = x.length;
+    if (n === 0 || n !== y.length) return NaN;
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += x[i];
+      sumY += y[i];
+      sumXY += x[i] * y[i];
+      sumX2 += x[i] * x[i];
+      sumY2 += y[i] * y[i];
+    }
+
+    const numerator = (n * sumXY) - (sumX * sumY);
+    const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+
+    if (denominator === 0) return NaN;
+    return numerator / denominator;
+  }
+
+  function linearRegression(points) {
+    const n = points.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+      sumX += points[i].x;
+      sumY += points[i].y;
+      sumXY += points[i].x * points[i].y;
+      sumX2 += points[i].x * points[i].x;
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { slope, intercept };
+  }
+
+  // --- Render Chart with D3 ---
+
+  function renderD3ScatterPlot(container, item, rank) {
+    const margin = { top: 10, right: 20, bottom: 45, left: 55 };
+    const width = 340 - margin.left - margin.right;
+    const height = 220 - margin.top - margin.bottom;
+
+    const card = d3.select(container)
+      .append("div")
+      .attr("class", "chart-card");
+
+    card.append("div")
+      .attr("class", "chart-title")
+      .text(`${item.var1} \nversus\n ${item.var2}`);
+
+//    card.append("div")
+//      .attr("class", "chart-subtitle")
+//      .text(`#${rank}: r = ${item.correlation.toFixed(3)}`);
+
+    const svg = card.append("svg")
+      .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Domains
+    const xExtent = d3.extent(item.points, d => d.x);
+    const yExtent = d3.extent(item.points, d => d.y);
+
+    const xPadding = (xExtent[1] - xExtent[0]) * 0.1 || 1;
+    const yPadding = (yExtent[1] - yExtent[0]) * 0.1 || 1;
+
+    // Scales
+    const xScale = d3.scaleLinear()
+      .domain([xExtent[0] - xPadding, xExtent[1] + xPadding])
+      .range([0, width]);
+
+    const yScale = d3.scaleLinear()
+      .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
+      .range([height, 0]);
+
+    // Axes
+    svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(xScale).ticks(5));
+
+    svg.append("g")
+      .call(d3.axisLeft(yScale).ticks(5));
+
+    // X Axis Label
+    svg.append("text")
+      .attr("class", "axis-label")
+      .attr("text-anchor", "middle")
+      .attr("x", width / 2)
+      .attr("y", height + 36)
+      .text(item.var1.length > 35 ? item.var1.substring(0, 32) + "..." : item.var1);
+
+    // Y Axis Label
+    svg.append("text")
+      .attr("class", "axis-label")
+      .attr("text-anchor", "middle")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -40)
+      .attr("x", -height / 2)
+      .text(item.var2.length > 35 ? item.var2.substring(0, 32) + "..." : item.var2);
+
+    // Trend Line
+    const { slope, intercept } = linearRegression(item.points);
+    const xMin = xExtent[0] - xPadding;
+    const xMax = xExtent[1] + xPadding;
+
+    svg.append("line")
+      .attr("x1", xScale(xMin))
+      .attr("y1", yScale(slope * xMin + intercept))
+      .attr("x2", xScale(xMax))
+      .attr("y2", yScale(slope * xMax + intercept))
+      .attr("stroke", "#dc2626")
+      .attr("stroke-width", 2);
+
+    // Scatter Data Points
+    svg.selectAll("circle")
+      .data(item.points)
+      .enter()
+      .append("circle")
+      .attr("cx", d => xScale(d.x))
+      .attr("cy", d => yScale(d.y))
+      .attr("r", 5)
+      .attr("fill", "#2563eb")
+      .attr("opacity", 0.8);
+  }
+
+  document.getElementById("calc-btn").addEventListener("click", () => {
+    const tableRows = [...table.tBodies[0].rows];
+    const rowData = [];
+
+    // Extract row data into Float64 arrays
+    tableRows.forEach(row => {
+      const questionText = row.cells[0].innerText.trim();
+      const values = [];
+      for (let i = 1; i < row.cells.length; i++) {
+        const val = parseFloat(row.cells[i].innerText.trim());
+        values.push(isNaN(val) ? NaN : val);
+      }
+      rowData.push({
+        label: questionText,
+        vector: new Float64Array(values)
+      });
+    });
+
+    const n = rowData.length;
+    const pairwiseResults = [];
+
+    // Compute pairwise correlations
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const x = rowData[i].vector;
+        const y = rowData[j].vector;
+
+        const points = [];
+        const validX = [];
+        const validY = [];
+
+        for (let k = 0; k < x.length; k++) {
+          if (!isNaN(x[k]) && !isNaN(y[k])) {
+            points.push({ x: x[k], y: y[k] });
+            validX.push(x[k]);
+            validY.push(y[k]);
+          }
+        }
+
+        const corr = pearsonCorrelation(validX, validY);
+        if (!isNaN(corr)) {
+          pairwiseResults.push({
+            var1: rowData[i].label,
+            var2: rowData[j].label,
+            correlation: corr,
+            points: points
+          });
+        }
+      }
+    }
+
+    // Sort descending by magnitude and select top 9
+    pairwiseResults.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+    const top9 = pairwiseResults.slice(0, 9);
+
+    const resultsContainer = document.getElementById("results-container");
+    const chartsGrid = document.getElementById("charts-grid");
+    chartsGrid.innerHTML = "";
+    resultsContainer.style.display = "block";
+
+    top9.forEach((item, index) => {
+      renderD3ScatterPlot(chartsGrid, item, index + 1);
+    });
+
+    // Smooth scroll to results
+    resultsContainer.scrollIntoView({ behavior: "smooth" });
+  });
+</script>
+
+</body>
+</html>

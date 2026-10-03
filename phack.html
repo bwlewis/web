@@ -404,8 +404,18 @@ Discuss this process and your results.
     }
   });
 
+const isTableEmpty = function (table) {
+  return Array.from(table.tBodies[0].rows).every(function (row) {
+    return Array.from(row.cells)
+      .slice(1) // Skip the question cell
+      .every(function (cell) {
+        return cell.textContent.trim() === '';
+      });
+  });
+};
 
   const fill = function() {
+    if(! isTableEmpty(document.querySelector('#question-table'))) return;
     const tableRows = [...table.tBodies[0].rows];
     const ranges = [
       [60, 76],   // Height (in)
@@ -542,7 +552,7 @@ function renderD3ScatterPlot(container, item, rank) {
 
 
   document.getElementById("calc-btn").addEventListener("click", () => {
-    const tableRows = [...table.tBodies[0].rows];
+    const tableRows = Array.from(table.tBodies[0].rows);
     const rowData = [];
     tableRows.forEach(row => {
       const questionText = row.cells[0].innerText.trim();
@@ -598,6 +608,7 @@ function renderD3ScatterPlot(container, item, rank) {
     });
     resultsContainer.scrollIntoView({ behavior: "smooth" });
   });
+
 </script>
 
 <button onclick="fill();">Fill with fake data</button>

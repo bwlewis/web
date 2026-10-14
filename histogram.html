@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Paste data and plot a histogram</title>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: sans-serif;
+    }
+
+    #controls {
+      margin-bottom: 16px;
+    }
+
+#controls button {
+  font: inherit;
+}
+
+.bin-width {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bin-width input[type="range"] {
+  margin: 0;
+}
+
+    #workspace {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+  #dataEntry {
+    display: flex;
+    flex-direction: column;
+  }
+
+    #grid {
+      border-collapse: collapse;
+      flex: 0 0 auto;
+    }
+
+    td {
+      border: 1px solid #999;
+      min-width: 90px;
+      height: 28px;
+      padding: 2px 6px;
+    }
+
+    td:focus {
+      outline: 2px solid #2675d8;
+    }
+
+    #chartContainer {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #chart {
+      display: block;
+      border: 1px solid #ddd;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+<h1>Histograms</h1>
+<blockquote>
+A histogram is a visual representation of the distribution of quantitative data. To construct a histogram, the first step is to "bin" (or "bucket") the range of values&mdash;divide the entire range of values into a series of intervals&mdash;and then count how many values fall into each bin. The bins are usually consecutive, non-overlapping intervals, typically of equal size.  Histograms give a rough sense of the underlying distribution of the data.
+&nbsp; &mdash;Adapted from <a href="https://en.wikipedia.org/wiki/Histogram">Wikipedia</a>
+</blockquote>
+<ol>
+<li>Paste data from Excel in the cell below by pressing CTRL+v .
+<br>
+Or, you can edit data in the cell directly and press CTRL+v to add more cells. Press the TAB key or SHIFT + TAB to navigate between ceels.
+<li>Once you've entered some data press the "Plot histogram" button to create a histogram.
+<li>Change the "Bin width" slider to adjust histogram bin width (the re-plot by pressing "Plot histogram").
+</ol>
+
+  <div id="controls" style="font-size: 1.3em;">
+    <button id="plotButton">Plot histogram</button>
+    <label class="bin-width">
+      Bin width:
+      <input id="binWidth" type="range" min="1" max="50" value="10">
+      <span id="binWidthLabel">10%</span> of range
+    </label>
+    <button id="toggleMean" type="button">Show mean</button>
+    <button id="toggleCentral90" type="button">Highlight central 90%</button>
+  </div>
+
+  <div id="workspace">
+  <div id="dataEntry">
+&#8595;PASTE DATA HERE&#8595;
+    <table id="grid">
+      <tbody>
+        <tr><td contenteditable="true"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+    <div id="chartContainer">
+      <svg id="chart"></svg>
+    </div>
+  </div>
+
+  <script>
+    const chartWidthPercent = 80;
+    const chartHeight = 450;
+    const table = document.querySelector("#grid");
+    const svg = d3.select("#chart");
+    let showMean = false;
+    let showCentral90 = false;
+
+    function percentile(sorted, p) {
+      const index = (sorted.length - 1) * p;
+      const lower = Math.floor(index);
+      const fraction = index - lower;
+      return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
+    }
+
+document.querySelector("#toggleMean").addEventListener("click", (event) => {
+  showMean = !showMean;
+  event.currentTarget.textContent = showMean ? "Hide mean" : "Show mean";
+  document.querySelector("#plotButton").click();
+});
+
+document.querySelector("#binWidth").addEventListener("change", () => {
+  document.querySelector("#plotButton").click();
+});
+
+document.querySelector("#toggleCentral90").addEventListener("click", (event) => {
+  showCentral90 = !showCentral90;
+  event.currentTarget.textContent = showCentral90
+    ? "Hide central 90% highlight"
+    : "Highlight central 90%";
+  document.querySelector("#plotButton").click();
+});
+
+    table.addEventListener("paste", (event) => {
+      const startCell = event.target.closest("td");
+      if (!startCell) return;
+
+
+const text = event.clipboardData.getData("text/plain")
+  .replace(/(?:\r?\n)+$/, "");
+if (!text) {
+  event.preventDefault();
+  const row = table.insertRow();
+  const cell = row.insertCell();
+  cell.contentEditable = "true";
+  cell.focus();
+  return;
+}
+const values = text
+  .split(/\r?\n/)
+  .flatMap(row => row.split("\t"));
+event.preventDefault();
+const startRow = startCell.parentElement.rowIndex;
+const startCol = startCell.cellIndex;
+values.forEach((value, rowOffset) => {
+  const rowIndex = startRow + rowOffset;
+  while (table.rows.length <= rowIndex) {
+    table.insertRow();
+  }
+  const targetRow = table.rows[rowIndex];
+  while (targetRow.cells.length <= startCol) {
+    const cell = targetRow.insertCell();
+    cell.contentEditable = "true";
+  }
+  const trimmed = value.trim();
+  targetRow.cells[startCol].textContent =
+    trimmed !== "" && Number.isFinite(Number(trimmed))
+      ? trimmed
+      : "";
+});
+
+      const blankRow = table.insertRow(startRow + rows.length);
+      blankRow.insertCell().contentEditable = "true";
+    });
+    const slider = document.querySelector("#binWidth");
+    const sliderLabel = document.querySelector("#binWidthLabel");
+    slider.addEventListener("input", () => {
+      sliderLabel.textContent = `${slider.value}%`;
+    });
+    document.querySelector("#plotButton").addEventListener("click", () => {
+      const values = [...table.querySelectorAll("td")]
+        .map(cell => cell.textContent.trim())
+        .filter(text => text !== "")
+        .map(Number)
+        .filter(Number.isFinite);
+      svg.selectAll("*").remove();
+      if (values.length === 0) {
+        svg.append("text")
+          .attr("x", 20)
+          .attr("y", 30)
+          .text("Paste some numeric data into the table first.");
+        return;
+      }
+      const availableWidth =
+        document.querySelector("#chartContainer").clientWidth;
+      const width = availableWidth * chartWidthPercent / 100;
+      const height = chartHeight;
+      svg .attr("width", width) .attr("height", height);
+      let [min, max] = d3.extent(values);
+      if (min === max) {
+        min -= 0.5;
+        max += 0.5;
+      }
+      const range = max - min;
+      const binWidth = range * Number(slider.value) / 100;
+      const thresholds = d3.range(min + binWidth, max, binWidth);
+      const bins = d3.bin()
+        .domain([min, max])
+        .thresholds(thresholds)(values);
+      const margin = { top: 20, right: 20, bottom: 45, left: 45 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const x = d3.scaleLinear()
+        .domain([min, max])
+        .range([0, innerWidth]);
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, bin => bin.length) || 1])
+        .range([innerHeight, 0]);
+
+const sortedValues = [...values].sort((a, b) => a - b);
+const mean = d3.mean(values);
+const lower90 = percentile(sortedValues, 0.05);
+const upper90 = percentile(sortedValues, 0.95);
+
+      const plot = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+      plot.append("g")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x));
+      plot.append("g")
+        .call(d3.axisLeft(y).ticks(5));
+      plot.selectAll("rect")
+        .data(bins)
+        .join("rect")
+        .attr("x", bin => x(bin.x0) + 1)
+        .attr("y", bin => y(bin.length))
+        .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+        .attr("height", bin => innerHeight - y(bin.length))
+.attr("fill-opacity", bin => {
+  if (!showCentral90) return 1;
+  const midpoint = (bin.x0 + bin.x1) / 2;
+  return midpoint >= lower90 && midpoint <= upper90 ? 1 : 0.2;
+})
+        .attr("fill", "SteelBlue");
+
+      plot.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 38)
+        .attr("text-anchor", "middle")
+        .text("Value");
+
+      plot.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -32)
+        .attr("text-anchor", "middle")
+        .text("Count");
+
+if (showMean) {
+  plot.append("line")
+    .attr("x1", x(mean))
+    .attr("x2", x(mean))
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "black")
+    .attr("stroke-width", 3);
+}
+
+
+    });
+  </script>
+</body>
+</html>

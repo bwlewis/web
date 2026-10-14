@@ -142,6 +142,34 @@ document.querySelector("#toggleCentral90").addEventListener("click", (event) => 
   document.querySelector("#plotButton").click();
 });
 
+
+table.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const startCell = event.target.closest("td");
+    if (!startCell) return;
+
+    const currentRow = startCell.parentElement;
+    const currentRowIndex = currentRow.rowIndex;
+    const colIndex = startCell.cellIndex;
+
+    const newRowIndex = currentRowIndex + 1;
+    let newRow;
+    if (newRowIndex < table.rows.length) {
+      newRow = table.rows[newRowIndex];
+    } else {
+      newRow = table.insertRow(newRowIndex);
+    }
+
+    while (newRow.cells.length <= colIndex) {
+      const cell = newRow.insertCell();
+      cell.contentEditable = "true";
+    }
+
+    newRow.cells[colIndex].focus();
+  }
+});
+
     table.addEventListener("paste", (event) => {
       const startCell = event.target.closest("td");
       if (!startCell) return;

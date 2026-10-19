@@ -89,7 +89,11 @@ Or, you can edit data in the cell directly and press CTRL+v to add more cells. P
       <span id="binWidthLabel">5%</span> of range
     </label>
     <button id="toggleMean" type="button">Show mean</button>
-    <button id="toggleCentral90" type="button">Highlight central 90%</button>
+<label class="central-interval">
+  Highlight central interval:
+  <input id="centralInterval" type="range" min="1" max="100" value="100">
+  <span id="centralIntervalLabel">100%</span>
+</label>
   </div>
 
   <div id="workspace">
@@ -113,14 +117,17 @@ Or, you can edit data in the cell directly and press CTRL+v to add more cells. P
     const table = document.querySelector("#grid");
     const svg = d3.select("#chart");
     let showMean = false;
-    let showCentral90 = false;
+    let centralInterval = 100;
 
-    function percentile(sorted, p) {
-      const index = (sorted.length - 1) * p;
-      const lower = Math.floor(index);
-      const fraction = index - lower;
-      return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
-    }
+function percentile(sorted, p) {
+  if (p <= 0) return sorted[0];
+  if (p >= 1) return sorted[sorted.length - 1];
+
+  const index = (sorted.length - 1) * p;
+  const lower = Math.floor(index);
+  const fraction = index - lower;
+  return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
+}
 
 document.querySelector("#toggleMean").addEventListener("click", (event) => {
   showMean = !showMean;
@@ -132,11 +139,12 @@ document.querySelector("#binWidth").addEventListener("change", () => {
   document.querySelector("#plotButton").click();
 });
 
-document.querySelector("#toggleCentral90").addEventListener("click", (event) => {
-  showCentral90 = !showCentral90;
-  event.currentTarget.textContent = showCentral90
-    ? "Hide central 90% highlight"
-    : "Highlight central 90%";
+const centralIntervalSlider = document.querySelector("#centralInterval");
+const centralIntervalLabel = document.querySelector("#centralIntervalLabel");
+
+centralIntervalSlider.addEventListener("input", () => {
+  centralInterval = Number(centralIntervalSlider.value);
+  centralIntervalLabel.textContent = `${centralInterval}%`;
   document.querySelector("#plotButton").click();
 });
 
@@ -280,8 +288,9 @@ document.querySelector("#plotButton").addEventListener("click", () => {
 
   const sortedMeans = [...bootstrapMeans].sort((a, b) => a - b);
   const mean = d3.mean(bootstrapMeans);
-  const lower90 = percentile(sortedMeans, 0.05);
-  const upper90 = percentile(sortedMeans, 0.95);
+  const tail = (1 - centralInterval / 100) / 2;
+  const lower = percentile(sortedMeans, tail);
+  const upper = percentile(sortedMeans, 1 - tail);
 
   const plot = svg.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -300,11 +309,10 @@ document.querySelector("#plotButton").addEventListener("click", () => {
     .attr("y", bin => y(bin.length))
     .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
     .attr("height", bin => innerHeight - y(bin.length))
-    .attr("fill-opacity", bin => {
-      if (!showCentral90) return 1;
-      const midpoint = (bin.x0 + bin.x1) / 2;
-      return midpoint >= lower90 && midpoint <= upper90 ? 1 : 0.2;
-    })
+.attr("fill-opacity", bin => {
+  const midpoint = (bin.x0 + bin.x1) / 2;
+  return midpoint >= lower && midpoint <= upper ? 1 : 0.2;
+})
     .attr("fill", "SteelBlue");
 
   plot.append("text")

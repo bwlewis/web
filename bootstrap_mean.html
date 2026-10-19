@@ -89,7 +89,6 @@ Or, you can edit data in the cell directly and press CTRL+v to add more cells. P
       <input id="binWidth" type="range" min="1" max="25" value="5">
       <span id="binWidthLabel">5%</span> of range
     </label>
-    <button id="toggleMean" type="button">Show mean</button>
 <label class="central-interval">
   Highlight central interval:
   <input id="centralInterval" type="range" min="1" max="100" value="100">
@@ -130,11 +129,6 @@ function percentile(sorted, p) {
   return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
 }
 
-document.querySelector("#toggleMean").addEventListener("click", (event) => {
-  showMean = !showMean;
-  event.currentTarget.textContent = showMean ? "Hide mean" : "Show mean";
-  document.querySelector("#plotButton").click();
-});
 
 document.querySelector("#binWidth").addEventListener("change", () => {
   document.querySelector("#plotButton").click();

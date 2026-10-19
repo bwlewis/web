@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Paste data and plot a bootstrapped histogram of the mean</title>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: sans-serif;
+    }
+
+    #controls {
+      margin-bottom: 16px;
+    }
+
+#controls button {
+  font: inherit;
+}
+
+.bin-width {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bin-width input[type="range"] {
+  margin: 0;
+}
+
+    #workspace {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+  #dataEntry {
+    display: flex;
+    flex-direction: column;
+  }
+
+    #grid {
+      border-collapse: collapse;
+      flex: 0 0 auto;
+    }
+
+    td {
+      border: 1px solid #999;
+      min-width: 90px;
+      height: 28px;
+      padding: 2px 6px;
+    }
+
+    td:focus {
+      outline: 2px solid #2675d8;
+    }
+
+    #chartContainer {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #chart {
+      display: block;
+      border: 1px solid #ddd;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+<h1>Bootstrapped Mean</h1>
+
+This bootstrap produces estimates of the mean by <i>resampling</i> data&mdash;randomly sampling data <emph>with replacement</emph>.
+<ol>
+<li>Paste data from Excel in the cell below by pressing CTRL+v .
+<br>
+Or, you can edit data in the cell directly and press CTRL+v to add more cells. Press the TAB key or SHIFT + TAB to navigate between ceels.
+<li>Once you've entered some data press the "Plot bootstrapped mean histogram" button to create a histogram of the bootstrapped means.
+<li>Change the "Bin width" slider to adjust histogram bin width.
+</ol>
+
+  <div id="controls" style="font-size: 1.3em;">
+    <button id="plotButton">Plot bootstrapped mean histogram</button>
+    <label class="bin-width">
+      Bin width:
+      <input id="binWidth" type="range" min="1" max="25" value="5">
+      <span id="binWidthLabel">5%</span> of range
+    </label>
+    <button id="toggleMean" type="button">Show mean</button>
+    <button id="toggleCentral90" type="button">Highlight central 90%</button>
+  </div>
+
+  <div id="workspace">
+  <div id="dataEntry">
+&#8595;PASTE/ENTER DATA HERE&#8595;
+    <table id="grid">
+      <tbody>
+        <tr><td contenteditable="true"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+    <div id="chartContainer">
+      <svg id="chart"></svg>
+    </div>
+  </div>
+
+  <script>
+    const chartWidthPercent = 80;
+    const chartHeight = 450;
+    const table = document.querySelector("#grid");
+    const svg = d3.select("#chart");
+    let showMean = false;
+    let showCentral90 = false;
+
+    function percentile(sorted, p) {
+      const index = (sorted.length - 1) * p;
+      const lower = Math.floor(index);
+      const fraction = index - lower;
+      return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
+    }
+
+document.querySelector("#toggleMean").addEventListener("click", (event) => {
+  showMean = !showMean;
+  event.currentTarget.textContent = showMean ? "Hide mean" : "Show mean";
+  document.querySelector("#plotButton").click();
+});
+
+document.querySelector("#binWidth").addEventListener("change", () => {
+  document.querySelector("#plotButton").click();
+});
+
+document.querySelector("#toggleCentral90").addEventListener("click", (event) => {
+  showCentral90 = !showCentral90;
+  event.currentTarget.textContent = showCentral90
+    ? "Hide central 90% highlight"
+    : "Highlight central 90%";
+  document.querySelector("#plotButton").click();
+});
+
+
+table.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+
+  const startCell = event.target.closest("td");
+  if (!startCell) return;
+
+  event.preventDefault();
+
+  const currentRow = startCell.parentElement;
+  const nextRowIndex = currentRow.rowIndex + 1;
+  const colIndex = startCell.cellIndex;
+
+  let nextRow = table.rows[nextRowIndex];
+  if (!nextRow) {
+    nextRow = table.insertRow(nextRowIndex);
+  }
+
+  while (nextRow.cells.length <= colIndex) {
+    nextRow.insertCell();
+  }
+
+  const nextCell = nextRow.cells[colIndex];
+  nextCell.contentEditable = "true";
+  nextCell.focus();
+});
+
+
+    table.addEventListener("paste", (event) => {
+      const startCell = event.target.closest("td");
+      if (!startCell) return;
+
+
+const text = event.clipboardData.getData("text/plain")
+  .replace(/(?:\r?\n)+$/, "");
+if (!text) {
+  event.preventDefault();
+  const row = table.insertRow();
+  const cell = row.insertCell();
+  cell.contentEditable = "true";
+  cell.focus();
+  return;
+}
+const values = text
+  .split(/\r?\n/)
+  .flatMap(row => row.split("\t"));
+event.preventDefault();
+const startRow = startCell.parentElement.rowIndex;
+const startCol = startCell.cellIndex;
+values.forEach((value, rowOffset) => {
+  const rowIndex = startRow + rowOffset;
+  while (table.rows.length <= rowIndex) {
+    table.insertRow();
+  }
+  const targetRow = table.rows[rowIndex];
+  while (targetRow.cells.length <= startCol) {
+    const cell = targetRow.insertCell();
+    cell.contentEditable = "true";
+  }
+  const trimmed = value.trim();
+  targetRow.cells[startCol].textContent =
+    trimmed !== "" && Number.isFinite(Number(trimmed))
+      ? trimmed
+      : "";
+});
+
+      const blankRow = table.insertRow(startRow + rows.length);
+      blankRow.insertCell().contentEditable = "true";
+    });
+    const slider = document.querySelector("#binWidth");
+    const sliderLabel = document.querySelector("#binWidthLabel");
+    slider.addEventListener("input", () => {
+      sliderLabel.textContent = `${slider.value}%`;
+    });
+
+
+
+
+document.querySelector("#plotButton").addEventListener("click", () => {
+  const values = [...table.querySelectorAll("td")]
+    .map(cell => cell.textContent.trim())
+    .filter(text => text !== "")
+    .map(Number)
+    .filter(Number.isFinite);
+
+  svg.selectAll("*").remove();
+
+  if (values.length === 0) {
+    svg.append("text")
+      .attr("x", 20)
+      .attr("y", 30)
+      .text("Paste some numeric data into the table first.");
+    return;
+  }
+
+  // Generate 10,000 bootstrap resamples, each the same size as the input.
+  const numberOfResamples = 10000;
+  const bootstrapMeans = d3.range(numberOfResamples).map(() => {
+    let sum = 0;
+
+    for (let i = 0; i < values.length; i++) {
+      sum += values[Math.floor(Math.random() * values.length)];
+    }
+
+    return sum / values.length;
+  });
+
+  const availableWidth =
+    document.querySelector("#chartContainer").clientWidth;
+  const width = availableWidth * chartWidthPercent / 100;
+  const height = chartHeight;
+  svg.attr("width", width).attr("height", height);
+
+  let [min, max] = d3.extent(bootstrapMeans);
+  if (min === max) {
+    min -= 0.5;
+    max += 0.5;
+  }
+
+  const range = max - min;
+  const binWidth = range * Number(slider.value) / 100;
+  const thresholds = d3.range(min + binWidth, max, binWidth);
+  const bins = d3.bin()
+    .domain([min, max])
+    .thresholds(thresholds)(bootstrapMeans);
+
+  const margin = { top: 20, right: 20, bottom: 45, left: 45 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const x = d3.scaleLinear()
+    .domain([min, max])
+    .range([0, innerWidth]);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(bins, bin => bin.length) || 1])
+    .range([innerHeight, 0]);
+
+  const sortedMeans = [...bootstrapMeans].sort((a, b) => a - b);
+  const mean = d3.mean(bootstrapMeans);
+  const lower90 = percentile(sortedMeans, 0.05);
+  const upper90 = percentile(sortedMeans, 0.95);
+
+  const plot = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  plot.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(x));
+
+  plot.append("g")
+    .call(d3.axisLeft(y).ticks(5));
+
+  plot.selectAll("rect")
+    .data(bins)
+    .join("rect")
+    .attr("x", bin => x(bin.x0) + 1)
+    .attr("y", bin => y(bin.length))
+    .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+    .attr("height", bin => innerHeight - y(bin.length))
+    .attr("fill-opacity", bin => {
+      if (!showCentral90) return 1;
+      const midpoint = (bin.x0 + bin.x1) / 2;
+      return midpoint >= lower90 && midpoint <= upper90 ? 1 : 0.2;
+    })
+    .attr("fill", "SteelBlue");
+
+  plot.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 38)
+    .attr("text-anchor", "middle")
+    .text("Resampled mean");
+
+  plot.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -32)
+    .attr("text-anchor", "middle")
+    .text("Count");
+
+  if (showMean) {
+    plot.append("line")
+      .attr("x1", x(mean))
+      .attr("x2", x(mean))
+      .attr("y1", 0)
+      .attr("y2", innerHeight)
+      .attr("stroke", "black")
+      .attr("stroke-width", 3);
+  }
+  plot.append("text")
+    .attr("x", 8)
+    .attr("y", 18)
+    .attr("text-anchor", "start")
+    .text(`Mean: ${d3.format(".2f")(mean)}`);
+});
+
+
+
+  </script>
+</body>
+</html>

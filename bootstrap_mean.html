@@ -188,7 +188,7 @@ if (!text) {
 }
 const values = text
   .split(/\r?\n/)
-  .flatMap(row => row.split("\t"));
+  .flatMap(row => row.split(/[\t,]/));
 event.preventDefault();
 const startRow = startCell.parentElement.rowIndex;
 const startCol = startCell.cellIndex;

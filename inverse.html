@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decode the Message</title>
+  <style>
+    body {
+      font: 1rem/1.5 system-ui, sans-serif;
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #202124;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+    }
+
+    code {
+      background: #f2f2f2;
+      padding: .15rem .35rem;
+      border-radius: 4px;
+      letter-spacing: .08em;
+      font-size: 1.2em;
+    }
+
+    input {
+      font: inherit;
+      padding: .5rem;
+      width: min(100%, 20rem);
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    #forward {
+      white-space: pre-line;
+    }
+.formula-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1rem 0;
+}
+
+.formula-row label {
+  margin: 0;
+}
+
+.formula-row input {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .formula-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <h1>Decode the Message Game</h1>
+  <p>The message below was encrypted by the piecewise function shown applied to letters encoded as numbers: A = 1, B = 2, …, Z = 26.</p>
+<p>Decrypt the message be entering the piecewise <i>inverse function</i> defined for odd- and even-valued output letters in the message.</p>
+
+  <section class="card">
+    <h2>Forward function</h2>
+    <p id="forward"></p>
+    <p style="font-size: 1.5em;"><strong>Encrypted message:</strong> <code id="cipher"></code></p>
+  </section>
+
+<section class="card">
+  <h2>Your inverse</h2>
+
+  <div class="formula-row">
+    <label for="oddAnswer">For odd-valued output y, enter f⁻¹(y) =</label>
+    <input id="oddAnswer" placeholder="For example: (y+1)/2" autocomplete="off">
+  </div>
+
+  <div class="formula-row">
+    <label for="evenAnswer">For even-valued output y, enter f⁻¹(y) =</label>
+    <input id="evenAnswer" placeholder="For example: y/2+13" autocomplete="off">
+  </div>
+
+  <p style="font-size: 1.5em;"><strong>Decrypted message:</strong> <code id="decoded"></code></p>
+<br><br>
+  <p>Results outside 1–26, non-integer results, or invalid formulas display as <code>?</code>.</p>
+</section>
+
+
+  <script>
+const puzzles = [
+  {
+    forward:
+      "f(x) = 2x − 1 for 1 ≤ x ≤ 13\n" +
+      "f(x) = 2x − 26 for 14 ≤ x ≤ 26",
+    apply: x => x <= 13 ? 2 * x - 1 : 2 * x - 26
+  },
+  {
+    forward:
+      "f(x) = 27 − 2x for 1 ≤ x ≤ 13\n" +
+      "f(x) = 54 − 2x for 14 ≤ x ≤ 26",
+    apply: x => x <= 13 ? 27 - 2 * x : 54 - 2 * x
+  },
+  {
+    forward:
+      "f(x) = 2x − 1 for 1 ≤ x ≤ 13\n" +
+      "f(x) = 54 − 2x for 14 ≤ x ≤ 26",
+    apply: x => x <= 13 ? 2 * x - 1 : 54 - 2 * x
+  },
+  {
+    forward:
+      "f(x) = 27 − 2x for 1 ≤ x ≤ 13\n" +
+      "f(x) = 2x − 26 for 14 ≤ x ≤ 26",
+    apply: x => x <= 13 ? 27 - 2 * x : 2 * x - 26
+  }
+];
+
+
+    const messages = [
+      "HAVE FUN",
+      "MATH ROCKS",
+      "CRACK THE CODE",
+      "YOU GOT THIS",
+      "ALGEBRA IS MAGIC",
+      "NICE WORK"
+    ];
+
+    function letterToNumber(letter) {
+      return letter.charCodeAt(0) - 64;
+    }
+
+    function numberToLetter(number) {
+      return String.fromCharCode(number + 64);
+    }
+
+    // Evaluates arithmetic formulas using only y, numbers, +, -, *, /, and parentheses.
+    // No JavaScript code from the input is executed.
+    function evaluateFormula(expression, yValue) {
+      const tokens = expression.match(/y|\d+(?:\.\d+)?|[()+\-*/]/gi);
+      if (!tokens) throw new Error("Invalid formula");
+
+      const compactInput = expression.replace(/\s+/g, "").toLowerCase();
+      const compactTokens = tokens.join("").toLowerCase();
+      if (compactInput !== compactTokens) throw new Error("Invalid character");
+
+      let position = 0;
+
+      function parseExpression() {
+        let value = parseTerm();
+
+        while (tokens[position] === "+" || tokens[position] === "-") {
+          const operator = tokens[position++];
+          const right = parseTerm();
+          value = operator === "+" ? value + right : value - right;
+        }
+
+        return value;
+      }
+
+      function parseTerm() {
+        let value = parseFactor();
+
+        while (tokens[position] === "*" || tokens[position] === "/") {
+          const operator = tokens[position++];
+          const right = parseFactor();
+          value = operator === "*" ? value * right : value / right;
+        }
+
+        return value;
+      }
+
+      function parseFactor() {
+        const token = tokens[position++];
+
+        if (token === "+") return parseFactor();
+        if (token === "-") return -parseFactor();
+
+        if (token === "(") {
+          const value = parseExpression();
+          if (tokens[position++] !== ")") throw new Error("Missing closing parenthesis");
+          return value;
+        }
+
+        if (token && token.toLowerCase() === "y") return yValue;
+        if (token && /^\d+(?:\.\d+)?$/.test(token)) return Number(token);
+
+        throw new Error("Invalid formula");
+      }
+
+      const result = parseExpression();
+      if (position !== tokens.length || !Number.isFinite(result)) {
+        throw new Error("Invalid result");
+      }
+
+      return result;
+    }
+
+    const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+    const message = messages[Math.floor(Math.random() * messages.length)];
+
+    const encoded = [...message].map(character => {
+      if (character === " ") return " ";
+      return puzzle.apply(letterToNumber(character));
+    });
+
+    const encodedLetters = encoded.map(value =>
+      value === " " ? " " : numberToLetter(value)
+    ).join("");
+
+    document.getElementById("forward").textContent = puzzle.forward;
+    document.getElementById("cipher").textContent = encodedLetters;
+
+    function updateDecodedMessage() {
+      const oddFormula = document.getElementById("oddAnswer").value;
+      const evenFormula = document.getElementById("evenAnswer").value;
+
+      const decoded = encoded.map(value => {
+        if (value === " ") return " ";
+
+        const formula = value % 2 === 1 ? oddFormula : evenFormula;
+
+        try {
+          const originalNumber = evaluateFormula(formula, value);
+
+          if (
+            Number.isInteger(originalNumber) &&
+            originalNumber >= 1 &&
+            originalNumber <= 26
+          ) {
+            return numberToLetter(originalNumber);
+          }
+        } catch {
+          // Keep the character as ? while the formula is empty or invalid.
+        }
+
+        return "?";
+      }).join("");
+
+      document.getElementById("decoded").textContent = decoded;
+    }
+
+    document.getElementById("oddAnswer").addEventListener("input", updateDecodedMessage);
+    document.getElementById("evenAnswer").addEventListener("input", updateDecodedMessage);
+
+    updateDecodedMessage();
+  </script>
+</body>
+</html>

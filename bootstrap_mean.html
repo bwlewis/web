@@ -209,7 +209,7 @@ values.forEach((value, rowOffset) => {
       : "";
 });
 
-      const blankRow = table.insertRow(startRow + rows.length);
+      const blankRow = table.insertRow(startRow + values.length);
       blankRow.insertCell().contentEditable = "true";
     });
     const slider = document.querySelector("#binWidth");

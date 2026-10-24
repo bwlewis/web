@@ -173,8 +173,6 @@ table.addEventListener("keydown", (event) => {
     table.addEventListener("paste", (event) => {
       const startCell = event.target.closest("td");
       if (!startCell) return;
-
-
 const text = event.clipboardData.getData("text/plain")
   .replace(/(?:\r?\n)+$/, "");
 if (!text) {
@@ -184,10 +182,8 @@ if (!text) {
   cell.contentEditable = "true";
   cell.focus();
   return;
-}
-const values = text
-  .split(/\r?\n/)
-  .flatMap(row => row.split("\t"));
+} 
+const values = text.split(/\r?\n/).flatMap(row => row.split(/[\t,]/));
 event.preventDefault();
 const startRow = startCell.parentElement.rowIndex;
 const startCol = startCell.cellIndex;
@@ -208,9 +204,13 @@ values.forEach((value, rowOffset) => {
       : "";
 });
 
-      const blankRow = table.insertRow(startRow + rows.length);
+      const blankRow = table.insertRow(startRow + values.length);
       blankRow.insertCell().contentEditable = "true";
     });
+
+
+
+
     const slider = document.querySelector("#binWidth");
     const sliderLabel = document.querySelector("#binWidthLabel");
     slider.addEventListener("input", () => {

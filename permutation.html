@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Permutation Testing: Differences Between Two Groups</title>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: sans-serif;
+    }
+
+    #controls {
+      margin-bottom: 16px;
+      font-size: 1.1em;
+    }
+
+    #controls button {
+      font: inherit;
+    }
+
+    #binWidth {
+      vertical-align: middle;
+    }
+
+    #workspace {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    #dataEntry {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #grid {
+      border-collapse: collapse;
+      flex: 0 0 auto;
+    }
+
+    th,
+    td {
+      border: 1px solid #999;
+      min-width: 90px;
+      height: 28px;
+      padding: 2px 6px;
+    }
+
+    th {
+      background: #eee;
+      text-align: left;
+    }
+
+    td:focus {
+      outline: 2px solid #2675d8;
+    }
+
+    #error {
+      color: #b00020;
+      margin: 8px 0;
+    }
+
+    #chartContainer {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #chart {
+      display: block;
+      border: 1px solid #ddd;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+  <h1>Permutation Testing: Differences Between Two Groups</h1>
+
+  <p>
+    Enter a group label and a numeric data value on each row. "<b>Group</b>" must include exactly two distinct labels (the first listed label is referred to as "Group 1" in the Hypothesis test selection). The test randomly
+    reassigns the group labels while keeping the values fixed. It compares
+    proportions when all <b>Data</b> values are 0 or 1; otherwise, it compares means.
+  </p>
+
+  <ol>
+    <li>Paste two columns from a spreadsheet, or enter data directly in the table.</li>
+    <li>Click “Run permutation test” to generate 10,000 permutations.</li>
+    <li>The histogram shows the permuted differences; the vertical line marks the observed difference.</li>
+  </ol>
+
+  <div id="controls">
+    <button id="plotButton">Run permutation test</button>
+    <label>
+      Bin width:
+      <input id="binWidth" type="range" min="1" max="25" value="5">
+      <span id="binWidthLabel">5%</span> of range
+    </label>
+
+<label style="margin-left: 1em;">
+  Hypothesis test:
+  <select id="alternative">
+    <option value="two-sided">Two-sided: groups differ</option>
+    <option value="greater">Group 1 &gt; Group 2</option>
+    <option value="less">Group 1 &lt; Group 2</option>
+  </select>
+</label>
+
+  </div>
+
+  <div id="error" role="alert"></div>
+
+  <div id="workspace">
+    <div id="dataEntry">
+      ↓ PASTE OR ENTER GROUP LABELS AND DATA ↓
+      <table id="grid">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="chartContainer">
+      <svg id="chart"></svg>
+    </div>
+  </div>
+
+  <script>
+    const numberOfPermutations = 10000;
+    const chartHeight = 450;
+    const chartWidthPercent = 80;
+
+    const table = document.querySelector("#grid");
+    const tbody = table.tBodies[0];
+    const svg = d3.select("#chart");
+    const errorBox = document.querySelector("#error");
+    const plotButton = document.querySelector("#plotButton");
+    const slider = document.querySelector("#binWidth");
+    const sliderLabel = document.querySelector("#binWidthLabel");
+
+    const addEditableRow = function (rowIndex) {
+      const index = rowIndex === undefined ? tbody.rows.length : rowIndex;
+      const row = tbody.insertRow(index);
+
+      for (let col = 0; col < 2; col++) {
+        const cell = row.insertCell();
+        cell.contentEditable = "true";
+      }
+
+      return row;
+    };
+
+    const getBodyRowIndex = function (row) {
+      return Array.prototype.indexOf.call(tbody.rows, row);
+    };
+
+
+table.addEventListener("keydown", function (event) {
+  const cell = event.target.closest("td");
+  if (!cell || !tbody.contains(cell)) return;
+
+  const currentRowIndex = getBodyRowIndex(cell.parentElement);
+
+  if (event.key === "Enter") {
+    event.preventDefault();
+
+    const currentColIndex = cell.cellIndex;
+    let nextRow = tbody.rows[currentRowIndex + 1];
+
+    if (!nextRow) {
+      nextRow = addEditableRow();
+    }
+
+    nextRow.cells[currentColIndex].focus();
+    return;
+  }
+
+  if (event.key === "Tab" && !event.shiftKey) {
+    const isLastInputCell =
+      currentRowIndex === tbody.rows.length - 1 &&
+      cell.cellIndex === 1;
+
+    if (isLastInputCell) {
+      event.preventDefault();
+
+      const nextRow = addEditableRow();
+      nextRow.cells[0].focus();
+    }
+  }
+});
+
+
+table.addEventListener("paste", function (event) {
+  const startCell = event.target.closest("td");
+  if (!startCell || !tbody.contains(startCell)) return;
+
+  const text = event.clipboardData.getData("text/plain")
+    .replace(/(?:\r?\n)+$/, "");
+
+  event.preventDefault();
+  if (text === "") return;
+
+  const hasTabs = text.includes("\t");
+  let pastedRows;
+
+  if (hasTabs) {
+    // Spreadsheet-style data: tabs separate columns, newlines separate rows.
+    pastedRows = text.split(/\r?\n/).map(function (line) {
+      return line.split("\t");
+    });
+  } else {
+    // Single-column data: newlines or commas separate values.
+    const lines = text.split(/\r?\n/);
+    pastedRows = [];
+
+    lines.forEach(function (line) {
+      line.split(",").forEach(function (value) {
+        pastedRows.push([value]);
+      });
+    });
+  }
+
+  const startRowIndex = getBodyRowIndex(startCell.parentElement);
+  const startColIndex = startCell.cellIndex;
+
+  pastedRows.forEach(function (values, rowOffset) {
+    const targetRowIndex = startRowIndex + rowOffset;
+
+    while (tbody.rows.length <= targetRowIndex) {
+      addEditableRow();
+    }
+
+    values.forEach(function (value, colOffset) {
+      const targetColIndex = startColIndex + colOffset;
+
+      if (targetColIndex < 2) {
+        tbody.rows[targetRowIndex].cells[targetColIndex].textContent =
+          value.trim();
+      }
+    });
+  });
+
+  const lastRow = tbody.rows[tbody.rows.length - 1];
+  const lastRowHasContent = Array.prototype.some.call(
+    lastRow.cells,
+    function (cell) {
+      return cell.textContent.trim() !== "";
+    }
+  );
+
+  if (lastRowHasContent) {
+    addEditableRow();
+  }
+});
+
+
+    slider.addEventListener("input", function () {
+      sliderLabel.textContent = slider.value + "%";
+    });
+
+    slider.addEventListener("change", function () {
+      plotButton.click();
+    });
+
+    const runPermutationTest = function () {
+      const alternative = document.querySelector("#alternative").value;
+      errorBox.textContent = "";
+      svg.selectAll("*").remove();
+
+      const rows = Array.prototype.map.call(tbody.rows, function (row) {
+        return {
+          label: row.cells[0].textContent.trim(),
+          rawValue: row.cells[1].textContent.trim()
+        };
+      }).filter(function (row) {
+        return row.label !== "" || row.rawValue !== "";
+      });
+
+      if (rows.length === 0) {
+        errorBox.textContent = "Enter group labels and numeric data first.";
+        return;
+      }
+
+      const incompleteRow = rows.some(function (row) {
+        return row.label === "" || row.rawValue === "";
+      });
+
+      if (incompleteRow) {
+        errorBox.textContent =
+          "Every data row must have both a group label and a numeric value.";
+        return;
+      }
+
+      const labels = Array.from(new Set(rows.map(function (row) {
+        return row.label;
+      })));
+
+      if (labels.length !== 2) {
+        errorBox.textContent =
+          "The group column must contain exactly two distinct labels; found " +
+          labels.length + ".";
+        return;
+      }
+
+      const data = rows.map(function (row) {
+        return Number(row.rawValue);
+      });
+
+      const hasInvalidValue = data.some(function (value) {
+        return !Number.isFinite(value);
+      });
+
+      if (hasInvalidValue) {
+        errorBox.textContent = "All values in the Data column must be numeric.";
+        return;
+      }
+
+      const group1 = labels[0];
+      const group2 = labels[1];
+      const originalLabels = rows.map(function (row) {
+        return row.label;
+      });
+const alternativeLabel = alternative === "greater" ? `${group1} > ${group2}` : alternative === "less" ? `${group1} < ${group2}` : `${group1} and ${group2} differ`;
+
+      const group1Indices = [];
+      const group2Indices = [];
+
+      rows.forEach(function (row, index) {
+        if (row.label === group1) {
+          group1Indices.push(index);
+        } else {
+          group2Indices.push(index);
+        }
+      });
+
+      if (group1Indices.length === 0 || group2Indices.length === 0) {
+        errorBox.textContent =
+          "Each group must contain at least one observation.";
+        return;
+      }
+
+      const isBinary = data.every(function (value) {
+        return value === 0 || value === 1;
+      });
+
+      const measureName = isBinary ? "proportions" : "means";
+
+      const calculateDifference = function (indices1, indices2) {
+        const mean1 = d3.mean(indices1, function (index) {
+          return data[index];
+        });
+        const mean2 = d3.mean(indices2, function (index) {
+          return data[index];
+        });
+
+        return mean1 - mean2;
+      };
+
+      const observedDifference =
+        calculateDifference(group1Indices, group2Indices);
+      const permutedDifferences = [];
+
+      for (let repetition = 0; repetition < numberOfPermutations; repetition++) {
+        const shuffledLabels = originalLabels.slice();
+
+        // Fisher–Yates shuffle of labels; group sizes stay fixed.
+        for (let i = shuffledLabels.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const temp = shuffledLabels[i];
+          shuffledLabels[i] = shuffledLabels[j];
+          shuffledLabels[j] = temp;
+        }
+
+        const permutedGroup1 = [];
+        const permutedGroup2 = [];
+
+        shuffledLabels.forEach(function (label, index) {
+          if (label === group1) {
+            permutedGroup1.push(index);
+          } else {
+            permutedGroup2.push(index);
+          }
+        });
+
+        permutedDifferences.push(
+          calculateDifference(permutedGroup1, permutedGroup2)
+        );
+      }
+
+ const extremeCount = permutedDifferences.filter(function (value) {
+  if (alternative === "greater") {
+    return value >= observedDifference;
+  }
+
+  if (alternative === "less") {
+    return value <= observedDifference;
+  }
+
+  return Math.abs(value) >= Math.abs(observedDifference);
+}).length;
+
+const pValue =
+  (extremeCount + 1) / (numberOfPermutations + 1);
+
+      const chartContainer = document.querySelector("#chartContainer");
+      const width = chartContainer.clientWidth * chartWidthPercent / 100;
+      const height = chartHeight;
+
+      svg.attr("width", width).attr("height", height);
+
+      let extent = d3.extent(permutedDifferences);
+      let min = Math.min(extent[0], observedDifference);
+      let max = Math.max(extent[1], observedDifference);
+
+      if (min === max) {
+        min -= 0.5;
+        max += 0.5;
+      }
+
+      const range = max - min;
+      const binSize = range * Number(slider.value) / 100;
+      const thresholds = d3.range(min + binSize, max, binSize);
+      const bins = d3.bin()
+        .domain([min, max])
+        .thresholds(thresholds)(permutedDifferences);
+
+      const margin = {
+        top: 55,
+        right: 20,
+        bottom: 55,
+        left: 55
+      };
+
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const x = d3.scaleLinear()
+        .domain([min, max])
+        .range([0, innerWidth]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, function (bin) {
+          return bin.length;
+        }) || 1])
+        .nice()
+        .range([innerHeight, 0]);
+
+      const plot = svg.append("g")
+        .attr(
+          "transform",
+          "translate(" + margin.left + "," + margin.top + ")"
+        );
+
+      plot.append("g")
+        .attr("transform", "translate(0," + innerHeight + ")")
+        .call(d3.axisBottom(x));
+
+      plot.append("g")
+        .call(d3.axisLeft(y).ticks(5));
+
+      plot.selectAll("rect")
+        .data(bins)
+        .join("rect")
+        .attr("x", function (bin) {
+          return x(bin.x0) + 1;
+        })
+        .attr("y", function (bin) {
+          return y(bin.length);
+        })
+        .attr("width", function (bin) {
+          return Math.max(0, x(bin.x1) - x(bin.x0) - 1);
+        })
+        .attr("height", function (bin) {
+          return innerHeight - y(bin.length);
+        })
+        .attr("fill", "SteelBlue");
+
+      plot.append("line")
+        .attr("x1", x(observedDifference))
+        .attr("x2", x(observedDifference))
+        .attr("y1", 0)
+        .attr("y2", innerHeight)
+        .attr("stroke", "darkred")
+        .attr("stroke-width", 3);
+
+      plot.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 42)
+        .attr("text-anchor", "middle")
+        .text(
+          "Permuted difference in " + measureName +
+          " (" + group1 + " − " + group2 + ")"
+        );
+
+      plot.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -38)
+        .attr("text-anchor", "middle")
+        .text("Count");
+
+      plot.append("text")
+        .attr("x", 8)
+        .attr("y", -12)
+        .attr("text-anchor", "start")
+        .text(
+          "Observed difference: " +
+          d3.format(".4f")(observedDifference) +
+          ";    " + alternativeLabel + " p ≈ " +
+          d3.format(".4f")(pValue)
+        );
+    };
+
+    document.querySelector("#alternative").addEventListener("change", function () {
+      plotButton.click();
+    });
+
+
+    plotButton.addEventListener("click", runPermutationTest);
+  </script>
+</body>
+</html>

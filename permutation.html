@@ -494,6 +494,22 @@ const pValue =
         .attr("stroke", "darkred")
         .attr("stroke-width", 3);
 
+
+if (alternative === "two-sided") {
+  const oppositeDifference = -observedDifference;
+
+  plot.append("line")
+    .attr("x1", x(oppositeDifference))
+    .attr("x2", x(oppositeDifference))
+    .attr("y1", 0)
+    .attr("y2", innerHeight)
+    .attr("stroke", "darkred")
+    .attr("stroke-width", 2)
+    .attr("stroke-dasharray", "4,4")
+    .attr("opacity", 0.45);
+}
+
+
       plot.append("text")
         .attr("x", innerWidth / 2)
         .attr("y", innerHeight + 42)

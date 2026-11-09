@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bootstrap Test: Difference Between Two Means</title>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: sans-serif;
+    }
+
+    #controls {
+      margin-bottom: 16px;
+      font-size: 1.05em;
+    }
+
+    #controls button {
+      font: inherit;
+    }
+
+    #workspace {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    #dataEntry {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #grid {
+      border-collapse: collapse;
+      flex: 0 0 auto;
+    }
+
+    th,
+    td {
+      border: 1px solid #999;
+      min-width: 90px;
+      height: 28px;
+      padding: 2px 6px;
+    }
+
+    th {
+      background: #eee;
+      text-align: left;
+    }
+
+    td:focus {
+      outline: 2px solid #2675d8;
+    }
+
+    #error {
+      color: #b00020;
+      margin: 8px 0;
+    }
+
+    #chartContainer {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #chart {
+      display: block;
+      border: 1px solid #ddd;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+  <h1>Centered Bootstrap Test: Difference Between Two Means</h1>
+
+  <p>
+    Enter a group label and a numeric value on each row. The app subtracts
+    each group’s mean from its values, then resamples within each group.
+    This creates a bootstrap distribution of differences under the null
+    hypothesis that the group means are equal. Group 1 is the first label
+    encountered; the plotted difference is Group 1 − Group 2.
+  </p>
+
+  <ol>
+    <li>Paste two columns from a spreadsheet or enter data in the table.</li>
+    <li>Select an alternative, then run the test.</li>
+    <li>The chart shades the simulated null results at least as extreme as the observed difference. Their proportion estimates the p-value.</li>
+  </ol>
+
+  <div id="controls">
+    <button id="plotButton">Run bootstrap test</button>
+
+    <label style="margin-left: 1em;">
+      Alternative:
+      <select id="alternative">
+        <option value="two-sided">Two-sided: groups differ</option>
+        <option value="greater">Group 1 &gt; Group 2</option>
+        <option value="less">Group 1 &lt; Group 2</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="error" role="alert"></div>
+
+  <div id="workspace">
+    <div id="dataEntry">
+      ↓ PASTE OR ENTER GROUP LABELS AND DATA ↓
+      <table id="grid">
+        <thead>
+          <tr>
+            <th>Group</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="chartContainer">
+      <svg id="chart"></svg>
+    </div>
+  </div>
+
+  <script>
+    const numberOfResamples = 10000;
+    const chartHeight = 450;
+    const chartWidthPercent = 80;
+
+    const table = document.querySelector("#grid");
+    const tbody = table.tBodies[0];
+    const svg = d3.select("#chart");
+    const errorBox = document.querySelector("#error");
+    const plotButton = document.querySelector("#plotButton");
+    const alternativeSelect = document.querySelector("#alternative");
+
+    function addEditableRow(index = tbody.rows.length) {
+      const row = tbody.insertRow(index);
+
+      for (let col = 0; col < 2; col++) {
+        const cell = row.insertCell();
+        cell.contentEditable = "true";
+      }
+
+      return row;
+    }
+
+    function getBodyRowIndex(row) {
+      return Array.prototype.indexOf.call(tbody.rows, row);
+    }
+
+    table.addEventListener("keydown", function (event) {
+      const cell = event.target.closest("td");
+      if (!cell || !tbody.contains(cell)) return;
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+
+        const rowIndex = getBodyRowIndex(cell.parentElement);
+        const colIndex = cell.cellIndex;
+        const nextRow = tbody.rows[rowIndex + 1] || addEditableRow();
+
+        nextRow.cells[colIndex].focus();
+      }
+
+      if (event.key === "Tab" && !event.shiftKey) {
+        const rowIndex = getBodyRowIndex(cell.parentElement);
+        const isLastCell =
+          rowIndex === tbody.rows.length - 1 && cell.cellIndex === 1;
+
+        if (isLastCell) {
+          event.preventDefault();
+          addEditableRow().cells[0].focus();
+        }
+      }
+    });
+
+    table.addEventListener("paste", function (event) {
+      const startCell = event.target.closest("td");
+      if (!startCell || !tbody.contains(startCell)) return;
+
+      const text = event.clipboardData.getData("text/plain")
+        .replace(/(?:\r?\n)+$/, "");
+
+      event.preventDefault();
+      if (text === "") return;
+
+      let pastedRows;
+
+      if (text.includes("\t")) {
+        pastedRows = text.split(/\r?\n/).map(line => line.split("\t"));
+      } else {
+        pastedRows = [];
+        text.split(/\r?\n/).forEach(line => {
+          line.split(",").forEach(value => pastedRows.push([value]));
+        });
+      }
+
+      const startRowIndex = getBodyRowIndex(startCell.parentElement);
+      const startColIndex = startCell.cellIndex;
+
+      pastedRows.forEach((values, rowOffset) => {
+        const targetRowIndex = startRowIndex + rowOffset;
+
+        while (tbody.rows.length <= targetRowIndex) {
+          addEditableRow();
+        }
+
+        values.forEach((value, colOffset) => {
+          const targetColIndex = startColIndex + colOffset;
+
+          if (targetColIndex < 2) {
+            tbody.rows[targetRowIndex].cells[targetColIndex].textContent =
+              value.trim();
+          }
+        });
+      });
+
+      const lastRow = tbody.rows[tbody.rows.length - 1];
+      const lastRowHasContent = Array.prototype.some.call(
+        lastRow.cells,
+        cell => cell.textContent.trim() !== ""
+      );
+
+      if (lastRowHasContent) addEditableRow();
+    });
+
+    alternativeSelect.addEventListener("change", () => plotButton.click());
+
+    function runBootstrapTest() {
+      errorBox.textContent = "";
+      svg.selectAll("*").remove();
+
+      const rows = Array.from(tbody.rows)
+        .map(row => ({
+          label: row.cells[0].textContent.trim(),
+          rawValue: row.cells[1].textContent.trim()
+        }))
+        .filter(row => row.label !== "" || row.rawValue !== "");
+
+      if (rows.length === 0) {
+        errorBox.textContent = "Enter group labels and numeric data first.";
+        return;
+      }
+
+      if (rows.some(row => row.label === "" || row.rawValue === "")) {
+        errorBox.textContent =
+          "Every data row must have both a group label and a numeric value.";
+        return;
+      }
+
+      const labels = Array.from(new Set(rows.map(row => row.label)));
+
+      if (labels.length !== 2) {
+        errorBox.textContent =
+          "The group column must contain exactly two distinct labels; found " +
+          labels.length + ".";
+        return;
+      }
+
+      const data = rows.map(row => Number(row.rawValue));
+
+      if (data.some(value => !Number.isFinite(value))) {
+        errorBox.textContent = "All values in the Data column must be numeric.";
+        return;
+      }
+
+      const group1 = labels[0];
+      const group2 = labels[1];
+      const group1Values = [];
+      const group2Values = [];
+
+      rows.forEach((row, index) => {
+        if (row.label === group1) {
+          group1Values.push(data[index]);
+        } else {
+          group2Values.push(data[index]);
+        }
+      });
+
+      if (group1Values.length === 0 || group2Values.length === 0) {
+        errorBox.textContent =
+          "Each group must contain at least one observation.";
+        return;
+      }
+
+      const mean1 = d3.mean(group1Values);
+      const mean2 = d3.mean(group2Values);
+      const observedDifference = mean1 - mean2;
+
+      // Center each group separately to generate a null distribution.
+      const centeredGroup1 = group1Values.map(value => value - mean1);
+      const centeredGroup2 = group2Values.map(value => value - mean2);
+
+      const bootstrapDifferences = d3.range(numberOfResamples).map(() => {
+        let sum1 = 0;
+        let sum2 = 0;
+
+        for (let i = 0; i < centeredGroup1.length; i++) {
+          const index = Math.floor(Math.random() * centeredGroup1.length);
+          sum1 += centeredGroup1[index];
+        }
+
+        for (let i = 0; i < centeredGroup2.length; i++) {
+          const index = Math.floor(Math.random() * centeredGroup2.length);
+          sum2 += centeredGroup2[index];
+        }
+
+        return sum1 / centeredGroup1.length -
+          sum2 / centeredGroup2.length;
+      });
+
+      const alternative = alternativeSelect.value;
+
+      function isInPValueTail(value) {
+        if (alternative === "less") {
+          return value <= observedDifference;
+        }
+
+        if (alternative === "greater") {
+          return value >= observedDifference;
+        }
+
+        return Math.abs(value) >= Math.abs(observedDifference);
+      }
+
+      const tailCount = bootstrapDifferences.filter(isInPValueTail).length;
+
+      // Add-one estimate prevents an estimated p-value of exactly zero.
+      const pValue = (tailCount + 1) / (numberOfResamples + 1);
+
+      const alternativeText = {
+        "two-sided": "two-sided",
+        "greater": `${group1} > ${group2}`,
+        "less": `${group1} < ${group2}`
+      }[alternative];
+
+      const chartContainer = document.querySelector("#chartContainer");
+      const width = chartContainer.clientWidth * chartWidthPercent / 100;
+      const height = chartHeight;
+
+      svg.attr("width", width).attr("height", height);
+
+      let [min, max] = d3.extent(bootstrapDifferences);
+      min = Math.min(min, observedDifference);
+      max = Math.max(max, observedDifference);
+
+      if (min === max) {
+        min -= 0.5;
+        max += 0.5;
+      }
+
+      const range = max - min;
+      const binSize = range / 20;
+      const thresholds = d3.range(min + binSize, max, binSize);
+      const bins = d3.bin()
+        .domain([min, max])
+        .thresholds(thresholds)(bootstrapDifferences);
+
+      const margin = { top: 65, right: 20, bottom: 55, left: 55 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      const x = d3.scaleLinear()
+        .domain([min, max])
+        .range([0, innerWidth]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, bin => bin.length) || 1])
+        .nice()
+        .range([innerHeight, 0]);
+
+      const plot = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      plot.append("g")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x));
+
+      plot.append("g")
+        .call(d3.axisLeft(y).ticks(5));
+
+      plot.selectAll("rect")
+        .data(bins)
+        .join("rect")
+        .attr("x", bin => x(bin.x0) + 1)
+        .attr("y", bin => y(bin.length))
+        .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+        .attr("height", bin => innerHeight - y(bin.length))
+        .attr("fill", "SteelBlue")
+        .attr("fill-opacity", bin => {
+          const midpoint = (bin.x0 + bin.x1) / 2;
+          return isInPValueTail(midpoint) ? 1 : 0.2;
+        });
+
+      plot.append("line")
+        .attr("x1", x(observedDifference))
+        .attr("x2", x(observedDifference))
+        .attr("y1", 0)
+        .attr("y2", innerHeight)
+        .attr("stroke", "darkred")
+        .attr("stroke-width", 3);
+
+      plot.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 42)
+        .attr("text-anchor", "middle")
+        .text(`Bootstrap difference in means (${group1} − ${group2})`);
+
+      plot.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -38)
+        .attr("text-anchor", "middle")
+        .text("Count");
+
+      plot.append("text")
+        .attr("x", 8)
+        .attr("y", -26)
+        .attr("text-anchor", "start")
+        .text(
+          `Observed difference: ${d3.format(".4~g")(observedDifference)}; ` +
+          `${alternativeText} p-value: ${d3.format(".3~g")(pValue)}`
+        );
+    }
+
+    plotButton.addEventListener("click", runBootstrapTest);
+  </script>
+</body>
+</html>

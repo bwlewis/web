@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parametric Bootstrap Test for a Proportion</title>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: sans-serif;
+    }
+
+    #controls {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 1.1em;
+    }
+
+    #controls button,
+    #controls input,
+    #controls select {
+      font: inherit;
+    }
+
+    #controls input[type="number"] {
+      width: 6em;
+      box-sizing: border-box;
+    }
+
+    #chart {
+      display: block;
+      border: 1px solid #ddd;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+  <h1>Parametric Bootstrap Test for a Single Proportion</h1>
+
+  The app generates samples from the null distribution
+  Binomial(n, p₀). Enter the observed proportion to calculate the p-value.
+
+  <div id="controls">
+    <label>
+      Null proportion p₀:
+      <input id="p0" type="number" min="0" max="1" step="any" value="0.5">
+    </label>
+
+    <label>
+      Sample size n:
+      <input id="sampleSize" type="number" min="1" step="1" value="30">
+    </label>
+
+    <label>
+      Observed proportion p̂:
+      <input id="observedProportion" type="number"
+             min="0" max="1" step="any" value="0.6">
+    </label>
+
+    <label>
+      Alternative:
+      <select id="tail">
+        <option value="right">Right-tailed (p &gt; p₀)</option>
+        <option value="left">Left-tailed (p &lt; p₀)</option>
+        <option value="two">Two-tailed (p ≠ p₀)</option>
+      </select>
+    </label>
+
+    <button id="plotButton" type="button">
+      Generate null samples and test
+    </button>
+  </div>
+
+  <svg id="chart"></svg>
+
+  <script>
+    const numberOfResamples = 10000;
+    const chartHeight = 450;
+    const chartWidthPercent = 80;
+
+    const p0Input = document.querySelector("#p0");
+    const nInput = document.querySelector("#sampleSize");
+    const observedProportionInput =
+      document.querySelector("#observedProportion");
+    const tailInput = document.querySelector("#tail");
+    const svg = d3.select("#chart");
+
+    function showMessage(message) {
+      svg.selectAll("*").remove();
+      svg.attr("width", 600).attr("height", 60)
+        .append("text")
+        .attr("x", 20)
+        .attr("y", 35)
+        .text(message);
+    }
+
+    document.querySelector("#plotButton").addEventListener("click", () => {
+      const p0 = Number(p0Input.value);
+      const n = Number(nInput.value);
+      const observedProportionInputValue =
+        Number(observedProportionInput.value);
+      const selectedTail = tailInput.value;
+
+      svg.selectAll("*").remove();
+
+      if (!Number.isFinite(p0) || p0 < 0 || p0 > 1) {
+        showMessage("Enter a null proportion between 0 and 1.");
+        return;
+      }
+
+      if (!Number.isInteger(n) || n < 1) {
+        showMessage("Enter a positive whole-number sample size.");
+        return;
+      }
+
+      if (
+        !Number.isFinite(observedProportionInputValue) ||
+        observedProportionInputValue < 0 ||
+        observedProportionInputValue > 1
+      ) {
+        showMessage("Enter an observed proportion between 0 and 1.");
+        return;
+      }
+
+      // A binomial sample can only produce proportions in increments of 1/n.
+      const k = Math.round(observedProportionInputValue * n);
+
+      if (Math.abs(observedProportionInputValue * n - k) > 1e-9) {
+        showMessage(
+          "The observed proportion must be a possible sample proportion: a multiple of 1/n."
+        );
+        return;
+      }
+
+      const observedProportion = k / n;
+
+      // Simulate n Bernoulli trials under H₀ for each resample.
+      const nullProportions = d3.range(numberOfResamples).map(() => {
+        let successes = 0;
+
+        for (let i = 0; i < n; i++) {
+          if (Math.random() < p0) successes++;
+        }
+
+        return successes / n;
+      });
+
+      let isInTail;
+
+      if (selectedTail === "right") {
+        isInTail = value => value >= observedProportion;
+      } else if (selectedTail === "left") {
+        isInTail = value => value <= observedProportion;
+      } else {
+        isInTail = value =>
+          Math.abs(value - p0) >= Math.abs(observedProportion - p0);
+      }
+
+      // Plus-one correction for Monte Carlo p-value estimation.
+      const extremeCount = nullProportions.filter(isInTail).length;
+      const pValue =
+        (extremeCount ) / (nullProportions.length );
+
+      const containerWidth =
+        document.querySelector("body").clientWidth - 32;
+      const width = containerWidth * chartWidthPercent / 100;
+      const height = chartHeight;
+
+      svg.attr("width", width).attr("height", height);
+
+      const margin = { top: 80, right: 20, bottom: 55, left: 60 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      // The possible sample proportions are k/n, for k = 0,...,n.
+      const bins = d3.bin()
+        .domain([0, 1])
+        .thresholds(d3.range(1, n).map(i => (i - 0.5) / n))
+        (nullProportions);
+
+      const x = d3.scaleLinear()
+        .domain([0, 1])
+        .range([0, innerWidth]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, bin => bin.length) || 1])
+        .range([innerHeight, 0]);
+
+      const plot = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      plot.append("g")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x));
+
+      plot.append("g")
+        .call(d3.axisLeft(y).ticks(5));
+
+      // Draw the original bars.
+      plot.selectAll("rect.bar")
+        .data(bins)
+        .join("rect")
+        .attr("class", "bar")
+        .attr("x", bin => x(bin.x0) + 1)
+        .attr("y", bin => y(bin.length))
+        .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+        .attr("height", bin => innerHeight - y(bin.length))
+        .attr("fill", "SteelBlue")
+        .attr("fill-opacity", 0.25);
+
+      // Define the shaded tail region(s).
+      let tailRegions;
+
+      if (selectedTail === "right") {
+        tailRegions = [[observedProportion, 1]];
+      } else if (selectedTail === "left") {
+        tailRegions = [[0, observedProportion]];
+      } else {
+        const distanceFromNull =
+          Math.abs(observedProportion - p0);
+        const lowerCutoff = Math.max(0, p0 - distanceFromNull);
+        const upperCutoff = Math.min(1, p0 + distanceFromNull);
+        tailRegions = [[0, lowerCutoff], [upperCutoff, 1]];
+      }
+
+      // Overlay only the parts of the bars within the tail region(s).
+      const tailSegments = [];
+
+      for (const bin of bins) {
+        if (bin.length === 0) continue;
+
+        const barLeft = x(bin.x0) + 1;
+        const barRight = x(bin.x1) - 1;
+
+        for (const [regionStart, regionEnd] of tailRegions) {
+          const segmentLeft = Math.max(barLeft, x(regionStart));
+          const segmentRight = Math.min(barRight, x(regionEnd));
+
+          if (segmentRight > segmentLeft) {
+            tailSegments.push({
+              bin,
+              left: segmentLeft,
+              right: segmentRight
+            });
+          }
+        }
+      }
+
+      plot.selectAll("rect.tail-shading")
+        .data(tailSegments)
+        .join("rect")
+        .attr("class", "tail-shading")
+        .attr("x", segment => segment.left)
+        .attr("y", segment => y(segment.bin.length))
+        .attr("width", segment => segment.right - segment.left)
+        .attr("height", segment => innerHeight - y(segment.bin.length))
+        .attr("fill", "Blue")
+        .attr("fill-opacity", 0.65);
+
+      plot.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 42)
+        .attr("text-anchor", "middle")
+        .text("Sample proportion under the null");
+
+      plot.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -42)
+        .attr("text-anchor", "middle")
+        .text("Count");
+
+      plot.append("text")
+        .attr("x", 8)
+        .attr("y", -50)
+        .text(`Null: p₀ = ${d3.format(".3f")(p0)}; n = ${n}`);
+
+      plot.append("text")
+        .attr("x", 8)
+        .attr("y", -28)
+        .text(
+          `Observed: ${d3.format(".3f")(observedProportion)}; ` +
+          `Monte Carlo p-value = ${d3.format(".4f")(pValue)}`
+        );
+
+      // Mark the observed sample proportion.
+      plot.append("line")
+        .attr("x1", x(observedProportion))
+        .attr("x2", x(observedProportion))
+        .attr("y1", 0)
+        .attr("y2", innerHeight)
+        .attr("stroke", "black")
+        .attr("stroke-width", 2);
+    });
+  </script>
+</body>
+</html>

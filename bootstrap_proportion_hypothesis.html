@@ -1,83 +1,136 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Parametric Bootstrap Test for a Proportion</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parametric Bootstrap Hypothesis Test for a Proportion</title>
 
-  <style>
-    body {
-      margin: 16px;
-      font-family: sans-serif;
-    }
+<style>
+body {
+  margin: 16px;
+  font-family: sans-serif;
+}
+#controls {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 16px;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 16px 0;
+  padding: 14px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  font-size: 1rem;
+}
 
-    #controls {
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      font-size: 1.1em;
-    }
+#controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
 
-    #controls button,
-    #controls input,
-    #controls select {
-      font: inherit;
-    }
+#controls button,
+#controls input,
+#controls select {
+  font: inherit;
+}
 
-    #controls input[type="number"] {
-      width: 6em;
-      box-sizing: border-box;
-    }
+#controls input[type="number"] {
+  width: 6em;
+  box-sizing: border-box;
+}
 
-    #chart {
-      display: block;
-      border: 1px solid #ddd;
-    }
-  </style>
+@media (max-width: 700px) {
+  #controls {
+    flex-wrap: wrap;
+  }
+}
 
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+#chart {
+  display: block;
+  border: 1px solid #ddd;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js"></script>
 </head>
 
 <body>
-  <h1>Parametric Bootstrap Test for a Single Proportion</h1>
+  <h1>Parametric Bootstrap Hypothesis Test for a Single Proportion</h1>
 
-  The app generates samples from the null distribution.
-  Enter the observed proportion to calculate the p-value.
+<p>
+This app tests a proportion: the sum of ``yes'' observations divided by the
+total number of observations. (Any binary observations work, like "yes" or "no",
+1 or 0, A or B, etc.) The app resamples the null distribution using the
+specified null proportion. Enter the count of observed "yes" values in your sample and select an
+alternative hypothesis to calculate the p-value.
+</p>
 
   <div id="controls">
     <label>
-      Null proportion p₀:
-      <input id="p0" type="number" min="0" max="1" step="any" value="0.5">
+      Null proportion:
+      <input id="p0" onChange="plotButton.click();" type="number" min="0" max="1" step="0.01" value="0.5">
     </label>
 
     <label>
-      Sample size n:
-      <input id="sampleSize" type="number" min="1" step="1" value="30">
+      Observed count of "yes" values in sample:
+      <input id="observedCount" onChange="plotButton.click();" type="number"
+             min="0"  step="1" value="20">
     </label>
 
     <label>
-      Observed proportion p̂:
-      <input id="observedProportion" type="number"
-             min="0" max="1" step="any" value="0.6">
+      Observed sample size n:
+      <input id="sampleSize" onChange="plotButton.click();" type="number" min="1" step="1" value="30">
     </label>
 
     <label>
       Alternative:
-      <select id="tail">
-        <option value="right">Right-tailed (p &gt; p₀)</option>
-        <option value="left">Left-tailed (p &lt; p₀)</option>
-        <option value="two">Two-tailed (p ≠ p₀)</option>
+      <select id="tail"   onChange="plotButton.click();" >
+        <option value="right">Right-tailed (p &gt; null)</option>
+        <option value="left">Left-tailed (p &lt; null)</option>
+        <option value="two">Two-tailed (p ≠ null)</option>
       </select>
     </label>
 
-    <button id="plotButton" type="button">
+    <button id="plotButton" type="button" style="display:none;">
       Generate null samples and test
     </button>
   </div>
 
   <svg id="chart"></svg>
+
+<h2>Hypothesis testing</h2>
+<p>
+A <emph>hypothesis test</emph> is a statistical technique for evaluating
+two competing possibilities, referred to as the "null" hypothesis and
+the "alternative" hypothesis. A hypothesis test
+estimates how often the alternative hypothesis is likely to occur
+<b>assuming that the null hypothesis is true</b>.
+</p>
+<p>
+If proportions at least as extreme as the observed proportion are very unlikely to occur, then maybe the null hypothesis assumption is false.
+</p>
+<h2>The null hypothesis</h2>
+The app simulates one null distribution sample by randomly generating <span id="ss"></span>
+observations, each with a <span id="np"></span> chance of being "yes" (set
+above by the Null proportion and sample size) then recording the total count of "yes"
+divided by <span id="ss1"></span> (the sample proportion). It repeats this
+10000 times to generate the histogram shown.
+<h2>Sample size</h2>
+The sample size is the actual observed measurement sample size. This is the number of observations in your sample.
+<h2>Observed proportion</h2>
+The observed proportion is the count of "yes" observations in your observed sample.
+<h2>Alternative</h2>
+<div id="alt"></div>
+<h2>\(p\)-value</h2>
+The total count of bars in the histogram above is 10,000. The \(p\)-value is simply the count of the dark-blue shaded bars divided by the total count. It estimates how likely proportions at least as extreme as what was observed in the sample would occur under the assumption that the null hypothesis is true. If the \(p\)-value is tiny, then maybe the null hypothesis is false!
+
 
   <script>
     const numberOfResamples = 10000;
@@ -86,112 +139,92 @@
 
     const p0Input = document.querySelector("#p0");
     const nInput = document.querySelector("#sampleSize");
-    const observedProportionInput =
-      document.querySelector("#observedProportion");
     const tailInput = document.querySelector("#tail");
     const svg = d3.select("#chart");
 
-    function showMessage(message) {
+    const observedProportion = function() {
+      return Number(document.querySelector("#observedCount").value) / Number(nInput.value);
+    };
+
+    const altMessage = function() {
+      alt.innerText = tailInput.value;
+      if(tailInput.value == "right") {
+        alt.innerText = "The alternative hypothesis is that the simulated sample proportions (assuming the null hypothesis is true) are at least as large as the observerd proportion in your observed sample (" + d3.format(".3f")(observedProportion()) + "). This is shown by the dark-blue highlighted part of the histogram."; 
+      } else if (tailInput.value == "left") {
+        alt.innerText = "The alternative hypothesis is that the simulated sample proportions (assuming the null hypothesis is true) are smaller than the observerd proportion in your observed sample (" + observedProportion() + "). This is shown by the dark-blue highlighted part of the histogram."; 
+      } else {
+        const d = Number(Math.abs(Number(observedProportion()) - Number(p0Input.value))).toPrecision(2);
+        alt.innerText = "The distance between your observed sample proportion and the null proportion is " + d + ". The alternative hypothesis is that the simulated sample proportions (assuming the null hypothesis is true) is at least that far away from the null proportion " + p0Input.value + ". This is shown by the dark-blue highlighted part of the histogram."; 
+      }
+    };
+
+    const showMessage = function(message) {
       svg.selectAll("*").remove();
       svg.attr("width", 600).attr("height", 60)
         .append("text")
         .attr("x", 20)
         .attr("y", 35)
         .text(message);
-    }
+    };
 
     document.querySelector("#plotButton").addEventListener("click", () => {
       const p0 = Number(p0Input.value);
       const n = Number(nInput.value);
-      const observedProportionInputValue =
-        Number(observedProportionInput.value);
       const selectedTail = tailInput.value;
-
+      const op = observedProportion();
       svg.selectAll("*").remove();
-
+      np.innerText = Math.round(p0 * 100);
+      ss.innerText = n;
+      ss1.innerText = n;
+      altMessage();
       if (!Number.isFinite(p0) || p0 < 0 || p0 > 1) {
         showMessage("Enter a null proportion between 0 and 1.");
         return;
       }
-
       if (!Number.isInteger(n) || n < 1) {
         showMessage("Enter a positive whole-number sample size.");
         return;
       }
-
-      if (
-        !Number.isFinite(observedProportionInputValue) ||
-        observedProportionInputValue < 0 ||
-        observedProportionInputValue > 1
-      ) {
-        showMessage("Enter an observed proportion between 0 and 1.");
+      if ( !Number.isFinite(op) || op < 0 || op > 1) {
+        showMessage("Enter an observed count between 0 the sample size.");
         return;
       }
-
-      // A binomial sample can only produce proportions in increments of 1/n.
-      const k = Math.round(observedProportionInputValue * n);
-
-      if (Math.abs(observedProportionInputValue * n - k) > 1e-9) {
-        showMessage(
-          "The observed proportion must be a possible sample proportion: a multiple of 1/n."
-        );
-        return;
-      }
-
-      const observedProportion = k / n;
-
-      // Simulate n Bernoulli trials under H₀ for each resample.
+      // Simulate n Bernoulli trials under the null hypothesis for each resample.
       const nullProportions = d3.range(numberOfResamples).map(() => {
         let successes = 0;
-
         for (let i = 0; i < n; i++) {
           if (Math.random() < p0) successes++;
         }
-
         return successes / n;
       });
-
       let isInTail;
-
       if (selectedTail === "right") {
-        isInTail = value => value >= observedProportion;
+        isInTail = value => value >= op;
       } else if (selectedTail === "left") {
-        isInTail = value => value <= observedProportion;
+        isInTail = value => value <= op;
       } else {
         isInTail = value =>
-          Math.abs(value - p0) >= Math.abs(observedProportion - p0);
+          Math.abs(value - p0) >= Math.abs(op - p0);
       }
-
-      // Plus-one correction for Monte Carlo p-value estimation.
       const extremeCount = nullProportions.filter(isInTail).length;
-      const pValue =
-        (extremeCount ) / (nullProportions.length );
-
-      const containerWidth =
-        document.querySelector("body").clientWidth - 32;
+      const pValue = extremeCount / nullProportions.length;
+      const containerWidth = document.querySelector("body").clientWidth - 32;
       const width = containerWidth * chartWidthPercent / 100;
       const height = chartHeight;
-
       svg.attr("width", width).attr("height", height);
-
       const margin = { top: 80, right: 20, bottom: 55, left: 60 };
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
-
-      // The possible sample proportions are k/n, for k = 0,...,n.
       const bins = d3.bin()
         .domain([0, 1])
         .thresholds(d3.range(1, n).map(i => (i - 0.5) / n))
         (nullProportions);
-
       const x = d3.scaleLinear()
         .domain([0, 1])
         .range([0, innerWidth]);
-
       const y = d3.scaleLinear()
         .domain([0, d3.max(bins, bin => bin.length) || 1])
         .range([innerHeight, 0]);
-
       const plot = svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -202,7 +235,6 @@
       plot.append("g")
         .call(d3.axisLeft(y).ticks(5));
 
-      // Draw the original bars.
       plot.selectAll("rect.bar")
         .data(bins)
         .join("rect")
@@ -214,34 +246,29 @@
         .attr("fill", "SteelBlue")
         .attr("fill-opacity", 0.25);
 
-      // Define the shaded tail region(s).
       let tailRegions;
 
       if (selectedTail === "right") {
-        tailRegions = [[observedProportion, 1]];
+        tailRegions = [[op, 1]];
       } else if (selectedTail === "left") {
-        tailRegions = [[0, observedProportion]];
+        tailRegions = [[0, op]];
       } else {
         const distanceFromNull =
-          Math.abs(observedProportion - p0);
+          Math.abs(op - p0);
         const lowerCutoff = Math.max(0, p0 - distanceFromNull);
         const upperCutoff = Math.min(1, p0 + distanceFromNull);
         tailRegions = [[0, lowerCutoff], [upperCutoff, 1]];
       }
 
-      // Overlay only the parts of the bars within the tail region(s).
       const tailSegments = [];
 
       for (const bin of bins) {
         if (bin.length === 0) continue;
-
         const barLeft = x(bin.x0) + 1;
         const barRight = x(bin.x1) - 1;
-
         for (const [regionStart, regionEnd] of tailRegions) {
           const segmentLeft = Math.max(barLeft, x(regionStart));
           const segmentRight = Math.min(barRight, x(regionEnd));
-
           if (segmentRight > segmentLeft) {
             tailSegments.push({
               bin,
@@ -279,25 +306,34 @@
       plot.append("text")
         .attr("x", 8)
         .attr("y", -50)
-        .text(`Null: p₀ = ${d3.format(".3f")(p0)}; n = ${n}`);
+        .text(`Null: null = ${d3.format(".3f")(p0)}; n = ${n}`);
 
       plot.append("text")
         .attr("x", 8)
         .attr("y", -28)
         .text(
-          `Observed: ${d3.format(".3f")(observedProportion)}; ` +
+          `Observed: ${d3.format(".3f")(op)}; ` +
           `Monte Carlo p-value = ${d3.format(".4f")(pValue)}`
         );
 
-      // Mark the observed sample proportion.
       plot.append("line")
-        .attr("x1", x(observedProportion))
-        .attr("x2", x(observedProportion))
+        .attr("x1", x(op))
+        .attr("x2", x(op))
         .attr("y1", 0)
         .attr("y2", innerHeight)
         .attr("stroke", "black")
         .attr("stroke-width", 2);
     });
+
+  document.addEventListener("DOMContentLoaded", function() {
+    plotButton.click();
+      const p0 = Number(p0Input.value);
+      np.innerText = Math.round(p0 * 100) + "%";
+      ss.innerText = document.querySelector("#sampleSize").value;
+      ss1.innerText = document.querySelector("#sampleSize").value;
+      altMessage();
+  });
   </script>
+
 </body>
 </html>

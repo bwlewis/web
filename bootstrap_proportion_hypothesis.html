@@ -350,7 +350,7 @@ const doPlot = function() {
     .attr("y", -28)
     .text(
       `Observed: ${d3.format(".3f")(op)}; ` +
-      `Monte Carlo p-value = ${d3.format(".4f")(pValue)}`
+      `p-value = ${d3.format(".4f")(pValue)}`
     );
 
   plot.append("line")

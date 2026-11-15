@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Null-centered non-parametric Bootstrap Test for a Mean</title>
+  <title>Null-Centered Non-Parametric Bootstrap Hypothesis Test for a Mean</title>
 
   <style>
     body {
@@ -77,380 +77,453 @@
 </head>
 
 <body>
-  <h1>Null-centered, non-parametric bootstrap test for a single mean</h1>
+<h1>Null-centered bootstrap hypothesis test for a single mean</h1>
 
-  This app shifts the entered data so its mean equals the null mean μ₀,
-  then resamples from the shifted data. Click the histogram at the observed
-  sample mean to calculate the p-value.
+<ol>
+  <li>Enter the null hypothesis mean.
+  <li>Select an alternative hypothesis.
+  <li>Paste data from Excel into the cells below, or enter data directly.  Press TAB or SHIFT+TAB to move between cells.
+</ol>
 
-  <ol>
-    <li>Paste data from Excel into the cells below, or edit the cells directly.
-      Press TAB or SHIFT+TAB to move between cells.</li>
-    <li>Enter the null mean and select the alternative hypothesis.</li>
-    <li>Click “Plot null-bootstrap means,” then click the histogram at the
-      observed sample mean.</li>
-  </ol>
+<div id="controls">
 
-  <div id="controls">
-    <button id="plotButton">Plot null-bootstrap means</button>
+<label>
+  Null mean:
+  <input id="mu0" type="number" step="any" value="0">
+</label>
 
-    <label>
-      Null mean μ₀:
-      <input id="mu0" type="number" step="any" value="0">
-    </label>
+<label>
+  Alternative:
+  <select id="tail">
+    <option value="right">mean > null mean (right-tailed)</option>
+    <option value="left">mean < null mean (left-tailed)</option>
+    <option value="two">mean &ne; null mean (two-tailed)</option>
+  </select>
+</label>
 
-    <label>
-      Tail:
-      <select id="tail">
-        <option value="right">Right-tailed (mean &gt; μ₀)</option>
-        <option value="left">Left-tailed (mean &lt; μ₀)</option>
-        <option value="two">Two-tailed (mean ≠ μ₀)</option>
-      </select>
-    </label>
+</div>
 
-    <label class="bin-width">
-      Bin width:
-      <input id="binWidth" type="range" min="1" max="25" value="5">
-      <span id="binWidthLabel">5%</span> of range
-    </label>
-
-
-
+<div id="workspace">
+  <div id="dataEntry">
+    ↓ PASTE/ENTER DATA HERE ↓
+    <table id="grid">
+      <tbody>
+        <tr><td contenteditable="true"></td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <div id="workspace">
-    <div id="dataEntry">
-      ↓ PASTE/ENTER DATA HERE ↓
-      <table id="grid">
-        <tbody>
-          <tr><td contenteditable="true"></td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div id="chartContainer">
+    <svg id="chart"></svg>
+    <div>
 
-    <div id="chartContainer">
-      <svg id="chart"></svg>
+<h2>Hypothesis testing</h2>
+<p>
+A <emph>hypothesis test</emph> is a statistical technique for evaluating two
+competing possibilities, referred to as the "null" hypothesis and the
+"alternative" hypothesis.  The test estimates how often means at least
+as extreme as the sample would occur in the direction of the alternative
+hypothesis, <b>assuming that the null hypothesis is true</b>.
+</p>
+<p>
+If means at least as extreme as the observed sample mean are very unlikely to occur, then maybe the null hypothesis assumption is false.
+</p>
+
+<h2>The null hypothesis</h2>
+
+<p>
+This app "centers" the sample data by subtracting the difference between the
+null mean you entered above and the sample mean from the data values. After
+subtracting, the modified sample data have a mean equal to the null mean value
+you entered.
+</p>
+<p>
+The null hypothesis in this app assumes that the centered sample data are
+reasonably representative of the population (sometimes, this may not be the
+case!). One null distribution bootstrap mean is then calculated by resampling
+(sampling with replacement) from the centered sample data.  This process is
+repeated 10000 times to generate the histogram shown above.
+</p>
+<h2>Sample size</h2>
+The actual number of total observations in your observed sample.
+<h2>Sample mean</h2>
+The mean of your sample data (without centering).
+<h2>Alternative</h2>
+<div id="alt"></div>
+<h2>p-value</h2>
+The total count of bars in the histogram above is 10000. The p-value is simply the count in the dark-blue shaded bars divided by the total count. It estimates how likely means at least as extreme as what was observed in the sample would occur under the assumption that the null hypothesis is true. If the p-value is tiny, then maybe the null hypothesis is false!
+
+<h2>Exercises</h2>
+
+<p>
+  <b>Study Time</b> (right-tailed): A college claims its students study an
+  average of 10 hours per week. A random sample of 12 students reports these
+  weekly study hours: 8, 9, 10, 11, 12, 7, 10, 13, 9, 11, 14, 10.
+  Is there evidence that students at this college study more than 10 hours
+  per week on average?
+  <button type="button" class="load-example" data-example="study">Load example</button>
+</p>
+<ul>
+  <li>What is the sample size and sample mean?</li>
+  <li>State the null and alternative hypotheses.</li>
+  <li>What p-value does the app estimate? What is your conclusion at the 5% level?</li>
+</ul>
+
+<p>
+  <b>Delivery Time</b> (left-tailed): A delivery service advertises an average
+  delivery time of 30 minutes. A random sample of 12 deliveries takes these
+  many minutes: 26, 28, 31, 25, 29, 27, 32, 24, 28, 30, 26, 29.
+  Is there evidence that the mean delivery time is less than 30 minutes?
+  <button type="button" class="load-example" data-example="delivery">Load example</button>
+</p>
+<ul>
+  <li>What is the sample size and sample mean?</li>
+  <li>State the null and alternative hypotheses.</li>
+  <li>What p-value does the app estimate? What is your conclusion at the 5% level?</li>
+</ul>
+
+<p>
+  <b>Filling Machine</b> (two-tailed): A machine is calibrated to dispense an
+  average of 500 grams per package. A random sample of 12 packages weighs:
+  496, 502, 505, 498, 501, 497, 503, 499, 504, 495, 500, 506 grams.
+  Is there evidence that the machine’s mean fill weight differs from 500 grams?
+  <button type="button" class="load-example" data-example="filling">Load example</button>
+</p>
+<ul>
+  <li>What is the sample size and sample mean?</li>
+  <li>State the null and alternative hypotheses.</li>
+  <li>What p-value does the app estimate? What is your conclusion at the 5% level?</li>
+</ul>
+
+
+
+
+<p style="margin-bottom:9em;"> </p>
+
+
     </div>
   </div>
+</div>
 
 <script>
-  const chartWidthPercent = 80;
-  const chartHeight = 450;
-  const numberOfResamples = 10000;
+const chartWidthPercent = 80;
+const chartHeight = 450;
+const numberOfResamples = 10000;
 
-  const table = document.querySelector("#grid");
-  const svg = d3.select("#chart");
-  const slider = document.querySelector("#binWidth");
-  const sliderLabel = document.querySelector("#binWidthLabel");
-  const plotButton = document.querySelector("#plotButton");
+const table = document.querySelector("#grid");
+const svg = d3.select("#chart");
 
+function refreshPlot() {
+  plot();
+}
 
+document.querySelector("#mu0").addEventListener("input", refreshPlot);
+document.querySelector("#tail").addEventListener("change", refreshPlot);
+table.addEventListener("input", refreshPlot);
 
-  function refreshPlot() {
-    plotButton.click();
+table.addEventListener("keydown", event => {
+  if (event.key !== "Enter") return;
+
+  const startCell = event.target.closest("td");
+  if (!startCell) return;
+
+  event.preventDefault();
+
+  const nextRowIndex = startCell.parentElement.rowIndex + 1;
+  const colIndex = startCell.cellIndex;
+
+  let nextRow = table.rows[nextRowIndex];
+  if (!nextRow) nextRow = table.insertRow(nextRowIndex);
+
+  while (nextRow.cells.length <= colIndex) {
+    nextRow.insertCell().contentEditable = "true";
   }
 
-  slider.addEventListener("input", () => {
-    sliderLabel.textContent = `${slider.value}%`;
-    refreshPlot();
+  nextRow.cells[colIndex].contentEditable = "true";
+  nextRow.cells[colIndex].focus();
+});
+
+table.addEventListener("paste", event => {
+  const startCell = event.target.closest("td");
+  if (!startCell) return;
+
+  event.preventDefault();
+
+  const text = event.clipboardData.getData("text/plain")
+    .replace(/(?:\r?\n)+$/, "");
+
+  if (!text) return;
+
+  const values = text.split(/\r?\n/);
+  const startRow = startCell.parentElement.rowIndex;
+
+  values.forEach((value, rowOffset) => {
+    const rowIndex = startRow + rowOffset;
+
+    while (table.rows.length <= rowIndex) {
+      table.insertRow();
+    }
+
+    const row = table.rows[rowIndex];
+    const cell = row.cells[0] || row.insertCell();
+    cell.contentEditable = "true";
+
+    const trimmed = value.trim();
+    cell.textContent =
+      trimmed !== "" && Number.isFinite(Number(trimmed))
+        ? trimmed
+        : "";
   });
 
-  document.querySelector("#mu0").addEventListener("input", refreshPlot);
-  document.querySelector("#tail").addEventListener("change", refreshPlot);
+  table.insertRow().insertCell().contentEditable = "true";
+  refreshPlot();
+});
 
-  table.addEventListener("keydown", event => {
-    if (event.key !== "Enter") return;
 
-    const startCell = event.target.closest("td");
-    if (!startCell) return;
+function plot() {
+  const values = [...table.querySelectorAll("td")]
+    .map(cell => cell.textContent.trim())
+    .filter(text => text !== "")
+    .map(Number)
+    .filter(Number.isFinite);
 
-    event.preventDefault();
+  svg.selectAll("*").remove();
 
-    const currentRow = startCell.parentElement;
-    const nextRowIndex = currentRow.rowIndex + 1;
-    const colIndex = startCell.cellIndex;
+  if (values.length === 0) {
+    svg.attr("width", 500).attr("height", 60)
+      .append("text")
+      .attr("x", 20)
+      .attr("y", 30)
+      .text("Paste some numeric data into the table...");
+    return;
+  }
 
-    let nextRow = table.rows[nextRowIndex];
-    if (!nextRow) nextRow = table.insertRow(nextRowIndex);
+  const mu0 = Number(document.querySelector("#mu0").value);
 
-    while (nextRow.cells.length <= colIndex) {
-      nextRow.insertCell();
+  if (!Number.isFinite(mu0)) {
+    svg.attr("width", 500).attr("height", 60)
+      .append("text")
+      .attr("x", 20)
+      .attr("y", 30)
+      .text("Enter a valid null mean μ₀.");
+    return;
+  }
+
+  const sampleMean = d3.mean(values);
+  const nullCenteredValues = values.map(value => value - sampleMean + mu0);
+
+  const bootstrapMeans = d3.range(numberOfResamples).map(() => {
+    let sum = 0;
+
+    for (let i = 0; i < nullCenteredValues.length; i++) {
+      const index = Math.floor(Math.random() * nullCenteredValues.length);
+      sum += nullCenteredValues[index];
     }
 
-    const nextCell = nextRow.cells[colIndex];
-    nextCell.contentEditable = "true";
-    nextCell.focus();
+    return sum / nullCenteredValues.length;
   });
 
-  table.addEventListener("paste", event => {
-    const startCell = event.target.closest("td");
-    if (!startCell) return;
+  const availableWidth =
+    document.querySelector("#chartContainer").clientWidth;
+  const width = availableWidth * chartWidthPercent / 100;
+  const height = chartHeight;
 
-    const text = event.clipboardData.getData("text/plain")
-      .replace(/(?:\r?\n)+$/, "");
+  svg.attr("width", width).attr("height", height);
 
-    event.preventDefault();
+  let [min, max] = d3.extent(bootstrapMeans);
+  if (min === max) {
+    min -= 0.5;
+    max += 0.5;
+  }
 
-    if (!text) {
-      const row = table.insertRow();
-      const cell = row.insertCell();
-      cell.contentEditable = "true";
-      cell.focus();
-      return;
+  const binWidth = (max - min) * 5 / 100;
+  const thresholds = d3.range(min + binWidth, max, binWidth);
+  const bins = d3.bin()
+    .domain([min, max])
+    .thresholds(thresholds)(bootstrapMeans);
+
+  const margin = { top: 20, right: 20, bottom: 45, left: 55 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const x = d3.scaleLinear()
+    .domain([min, max])
+    .range([0, innerWidth]);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(bins, bin => bin.length) || 1])
+    .range([innerHeight, 0]);
+
+  const chart = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  chart.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(x));
+
+  chart.append("g").call(d3.axisLeft(y).ticks(5));
+
+  chart.selectAll("rect.bar")
+    .data(bins)
+    .join("rect")
+    .attr("class", "bar")
+    .attr("x", bin => x(bin.x0) + 1)
+    .attr("y", bin => y(bin.length))
+    .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
+    .attr("height", bin => innerHeight - y(bin.length))
+    .attr("fill", "SteelBlue")
+    .attr("fill-opacity", 0.2);
+
+  chart.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 38)
+    .attr("text-anchor", "middle")
+    .text("Null-centered bootstrap mean");
+
+  chart.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -38)
+    .attr("text-anchor", "middle")
+    .text("Count");
+
+  chart.append("text")
+    .attr("x", 8)
+    .attr("y", 18)
+    .text(`Null mean: ${d3.format(".3f")(mu0)}`);
+
+
+  function updateCutoff(cutoff) {
+    const selectedTail = document.querySelector("#tail").value;
+
+    let isInTail;
+    if (selectedTail === "right") {
+      isInTail = value => value >= cutoff;
+    } else if (selectedTail === "left") {
+      isInTail = value => value <= cutoff;
+    } else {
+      isInTail = value =>
+        Math.abs(value - mu0) >= Math.abs(cutoff - mu0);
     }
 
-    const values = text.split(/\r?\n/)
-      .flatMap(row => row.split(/[\t,]/));
+    const pValue =
+      bootstrapMeans.filter(isInTail).length / bootstrapMeans.length;
 
-    const startRow = startCell.parentElement.rowIndex;
-    const startCol = startCell.cellIndex;
+    chart.selectAll("rect.tail-overlay").remove();
 
-    values.forEach((value, rowOffset) => {
-      const rowIndex = startRow + rowOffset;
-
-      while (table.rows.length <= rowIndex) {
-        table.insertRow();
-      }
-
-      const targetRow = table.rows[rowIndex];
-
-      while (targetRow.cells.length <= startCol) {
-        const cell = targetRow.insertCell();
-        cell.contentEditable = "true";
-      }
-
-      const trimmed = value.trim();
-      targetRow.cells[startCol].textContent =
-        trimmed !== "" && Number.isFinite(Number(trimmed))
-          ? trimmed
-          : "";
-    });
-
-    const blankRow = table.insertRow(startRow + values.length);
-    blankRow.insertCell().contentEditable = "true";
-  });
-
-  plotButton.addEventListener("click", () => {
-    const values = [...table.querySelectorAll("td")]
-      .map(cell => cell.textContent.trim())
-      .filter(text => text !== "")
-      .map(Number)
-      .filter(Number.isFinite);
-
-    svg.selectAll("*").remove();
-
-    if (values.length === 0) {
-      svg.attr("width", 500).attr("height", 60)
-        .append("text")
-        .attr("x", 20)
-        .attr("y", 30)
-        .text("Paste some numeric data into the table first.");
-      return;
+    let tailRanges;
+    if (selectedTail === "right") {
+      tailRanges = [[cutoff, max]];
+    } else if (selectedTail === "left") {
+      tailRanges = [[min, cutoff]];
+    } else {
+      const distance = Math.abs(cutoff - mu0);
+      tailRanges = [
+        [min, mu0 - distance],
+        [mu0 + distance, max]
+      ];
     }
 
-    const mu0 = Number(document.querySelector("#mu0").value);
-
-    if (!Number.isFinite(mu0)) {
-      svg.attr("width", 500).attr("height", 60)
-        .append("text")
-        .attr("x", 20)
-        .attr("y", 30)
-        .text("Enter a valid null mean μ₀.");
-      return;
-    }
-
-    const sampleMean = d3.mean(values);
-
-    const nullCenteredValues = values.map(
-      value => value - sampleMean + mu0
+    const tailSegments = bins.flatMap(bin =>
+      tailRanges
+        .map(([start, end]) => [
+          Math.max(bin.x0, start),
+          Math.min(bin.x1, end)
+        ])
+        .filter(([start, end]) => end > start)
+        .map(([start, end]) => ({ bin, start, end }))
     );
 
-    const bootstrapMeans = d3.range(numberOfResamples).map(() => {
-      let sum = 0;
-
-      for (let i = 0; i < nullCenteredValues.length; i++) {
-        const index = Math.floor(
-          Math.random() * nullCenteredValues.length
-        );
-        sum += nullCenteredValues[index];
-      }
-
-      return sum / nullCenteredValues.length;
-    });
-
-    const availableWidth =
-      document.querySelector("#chartContainer").clientWidth;
-    const width = availableWidth * chartWidthPercent / 100;
-    const height = chartHeight;
-
-    svg.attr("width", width).attr("height", height);
-
-    let [min, max] = d3.extent(bootstrapMeans);
-    if (min === max) {
-      min -= 0.5;
-      max += 0.5;
-    }
-
-    const range = max - min;
-    const binWidth = range * Number(slider.value) / 100;
-    const thresholds = d3.range(min + binWidth, max, binWidth);
-
-    const bins = d3.bin()
-      .domain([min, max])
-      .thresholds(thresholds)(bootstrapMeans);
-
-    const margin = { top: 20, right: 20, bottom: 45, left: 55 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
-
-    const x = d3.scaleLinear()
-      .domain([min, max])
-      .range([0, innerWidth]);
-
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(bins, bin => bin.length) || 1])
-      .range([innerHeight, 0]);
-
-    const plot = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    plot.append("g")
-      .attr("transform", `translate(0,${innerHeight})`)
-      .call(d3.axisBottom(x));
-
-    plot.append("g")
-      .call(d3.axisLeft(y).ticks(5));
-
-    plot.selectAll("rect.bar")
-      .data(bins)
+    chart.selectAll("rect.tail-overlay")
+      .data(tailSegments)
       .join("rect")
-      .attr("class", "bar")
-      .attr("x", bin => x(bin.x0) + 1)
-      .attr("y", bin => y(bin.length))
-      .attr("width", bin => Math.max(0, x(bin.x1) - x(bin.x0) - 1))
-      .attr("height", bin => innerHeight - y(bin.length))
+      .attr("class", "tail-overlay")
+      .attr("x", segment => x(segment.start))
+      .attr("y", segment => y(segment.bin.length))
+      .attr("width", segment => x(segment.end) - x(segment.start))
+      .attr("height", segment => innerHeight - y(segment.bin.length))
       .attr("fill", "SteelBlue")
-      .attr("fill-opacity", 0.2);
+      .attr("pointer-events", "none");
 
-    plot.append("text")
-      .attr("x", innerWidth / 2)
-      .attr("y", innerHeight + 38)
-      .attr("text-anchor", "middle")
-      .text("Null-bootstrap mean");
 
-    plot.append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("x", -innerHeight / 2)
-      .attr("y", -38)
-      .attr("text-anchor", "middle")
-      .text("Count");
+    chart.append("line")
+      .attr("x1", x(cutoff))
+      .attr("x2", x(cutoff))
+      .attr("y1", 0)
+      .attr("y2", innerHeight)
+      .attr("stroke", "black")
+      .attr("stroke-width", 2)
+      .attr("pointer-events", "none");
 
-    plot.append("text")
-      .attr("x", 8)
-      .attr("y", 18)
-      .attr("text-anchor", "start")
-      .text(`Null mean μ₀: ${d3.format(".3f")(mu0)}`);
-
-    plot.append("text")
+    chart.append("text")
+      .attr("class", "p-value-label")
       .attr("x", 8)
       .attr("y", 38)
-      .attr("text-anchor", "start")
-      .text(`Sample mean: ${d3.format(".3f")(sampleMean)}`);
+      .text(
+        `Sample mean: ${d3.format(".3f")(cutoff)}; ` +
+        `p-value: ${d3.format(".4f")(pValue)}`
+      )
+      .attr("pointer-events", "none");
 
-    function updateCutoff(cutoff) {
-      const selectedTail = document.querySelector("#tail").value;
+  }
 
-      let isInTail;
+  chart.append("rect")
+    .attr("width", innerWidth)
+    .attr("height", innerHeight)
+    .attr("fill", "transparent")
+    .style("cursor", "crosshair")
 
-      if (selectedTail === "right") {
-        isInTail = value => value >= cutoff;
-      } else if (selectedTail === "left") {
-        isInTail = value => value <= cutoff;
-      } else {
-        isInTail = value =>
-          Math.abs(value - mu0) >= Math.abs(cutoff - mu0);
-      }
+  updateCutoff(sampleMean);
+}
 
-      const extremeCount = bootstrapMeans.filter(isInTail).length;
-      const pValue = extremeCount / bootstrapMeans.length;
+plot();
 
-      plot.selectAll("rect.tail-overlay").remove();
 
-      let tailRanges;
+const examples = {
+  study: {
+    mu0: 10,
+    tail: "right",
+    values: [8, 9, 10, 11, 12, 7, 10, 13, 9, 11, 14, 10]
+  },
+  delivery: {
+    mu0: 30,
+    tail: "left",
+    values: [26, 28, 31, 25, 29, 27, 32, 24, 28, 30, 26, 29]
+  },
+  filling: {
+    mu0: 500,
+    tail: "two",
+    values: [496, 502, 505, 498, 501, 497, 503, 499, 504, 495, 500, 506]
+  }
+};
 
-      if (selectedTail === "right") {
-        tailRanges = [[cutoff, max]];
-      } else if (selectedTail === "left") {
-        tailRanges = [[min, cutoff]];
-      } else {
-        const distance = Math.abs(cutoff - mu0);
-        tailRanges = [
-          [min, mu0 - distance],
-          [mu0 + distance, max]
-        ];
-      }
+document.querySelectorAll(".load-example").forEach(button => {
+  button.addEventListener("click", () => {
+    const example = examples[button.dataset.example];
 
-      const tailSegments = bins.flatMap(bin =>
-        tailRanges
-          .map(([rangeStart, rangeEnd]) => [
-            Math.max(bin.x0, rangeStart),
-            Math.min(bin.x1, rangeEnd)
-          ])
-          .filter(([start, end]) => end > start)
-          .map(([start, end]) => ({ bin, start, end }))
-      );
+    document.querySelector("#mu0").value = example.mu0;
+    document.querySelector("#tail").value = example.tail;
 
-      plot.selectAll("rect.tail-overlay")
-        .data(tailSegments)
-        .join("rect")
-        .attr("class", "tail-overlay")
-        .attr("x", segment => x(segment.start))
-        .attr("y", segment => y(segment.bin.length))
-        .attr("width", segment => x(segment.end) - x(segment.start))
-        .attr("height", segment => innerHeight - y(segment.bin.length))
-        .attr("fill", "SteelBlue")
-        .attr("fill-opacity", 1)
-        .style("pointer-events", "none");
+    table.tBodies[0].replaceChildren();
 
-      plot.selectAll(".click-marker, .p-value-label").remove();
+    example.values.forEach(value => {
+      const row = table.tBodies[0].insertRow();
+      const cell = row.insertCell();
+      cell.contentEditable = "true";
+      cell.textContent = value;
+    });
 
-      const cutoffX = x(cutoff);
+    const finalRow = table.tBodies[0].insertRow();
+    const finalCell = finalRow.insertCell();
+    finalCell.contentEditable = "true";
 
-      plot.append("line")
-        .attr("class", "click-marker")
-        .attr("x1", cutoffX)
-        .attr("x2", cutoffX)
-        .attr("y1", 0)
-        .attr("y2", innerHeight)
-        .attr("stroke", "black")
-        .attr("stroke-width", 2)
-        .style("pointer-events", "none");
-
-      plot.append("text")
-        .attr("class", "p-value-label")
-        .attr("x", 8)
-        .attr("y", 58)
-        .attr("text-anchor", "start")
-        .text(
-          `Cutoff: ${d3.format(".3f")(cutoff)}; ` +
-          `p-value: ${d3.format(".4f")(pValue)}`
-        )
-        .style("pointer-events", "none");
-    }
-
-    plot.append("rect")
-      .attr("class", "click-target")
-      .attr("width", innerWidth)
-      .attr("height", innerHeight)
-      .attr("fill", "transparent")
-      .style("cursor", "crosshair")
-      .on("click", function(event) {
-        const [clickX] = d3.pointer(event, this);
-        updateCutoff(x.invert(clickX));
-      });
-
-    updateCutoff(sampleMean);
+    refreshPlot();
   });
+});
+
+
+
+
 </script>
 
 

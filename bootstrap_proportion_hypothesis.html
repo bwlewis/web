@@ -123,9 +123,9 @@ above by the Null proportion and sample size) then recording the total count of 
 divided by <span id="ss1"></span> (the sample proportion). It repeats this
 10000 times to generate the histogram shown.
 <h2>Sample size</h2>
-The sample size is the actual observed measurement sample size. This is the number of observations in your sample.
+The actual number of total observations in your observed sample.
 <h2>Observed proportion</h2>
-The observed proportion is the count of "yes" observations in your observed sample.
+The count of "yes" observations in your observed sample.
 <h2>Alternative</h2>
 <div id="alt"></div>
 <h2>\(p\)-value</h2>
@@ -173,7 +173,7 @@ The total count of bars in the histogram above is 10,000. The \(p\)-value is sim
       const selectedTail = tailInput.value;
       const op = observedProportion();
       svg.selectAll("*").remove();
-      np.innerText = Math.round(p0 * 100);
+      np.innerText = Math.round(p0 * 100) + "%";
       ss.innerText = n;
       ss1.innerText = n;
       altMessage();

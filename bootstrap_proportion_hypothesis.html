@@ -58,7 +58,6 @@ body {
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js"></script>
 </head>
 
 <body>
@@ -128,8 +127,38 @@ The actual number of total observations in your observed sample.
 The count of "yes" observations in your observed sample.
 <h2>Alternative</h2>
 <div id="alt"></div>
-<h2>\(p\)-value</h2>
-The total count of bars in the histogram above is 10,000. The \(p\)-value is simply the count of the dark-blue shaded bars divided by the total count. It estimates how likely proportions at least as extreme as what was observed in the sample would occur under the assumption that the null hypothesis is true. If the \(p\)-value is tiny, then maybe the null hypothesis is false!
+<h2>p-value</h2>
+The total count of bars in the histogram above is 10,000. The p-value is simply the count of the dark-blue shaded bars divided by the total count. It estimates how likely proportions at least as extreme as what was observed in the sample would occur under the assumption that the null hypothesis is true. If the p-value is tiny, then maybe the null hypothesis is false!
+
+<h2>Exercises</h2>
+
+<p>
+<b>Polls and Votes</b> (right-tailed): In a poll of one stats class of 24 students, 14 prefer an oral presentation final exam, 10 prefer a non-oral written one. Is there evidence from this poll that all statistics students at Garrett College would vote for an oral exam? 
+<br><br>
+<ul>
+<li> What is the sample size?
+<li> What is the alternative hypothesis?
+<li> What is the null hypothesis?
+<li> Set up the problem using the app.
+<li> Pick a statistical discernability level (significance level). Using that level, can you conclude whether the vote would pass or fail?
+</ul>
+</p>
+<p style="margin-bottom:9em;">
+</p>
+
+<p>
+<b>Usability Test</b> (right-tailed): A website team tests 50 randomly selected first-time users from its target audience. Each user attempts the same signup task once; 38 complete it without help. Let <i>p</i> be the proportion of all first-time users in the target audience who would complete the task without help. Does this sample provide statistically discernable evidence, at the 5% level, that <i>p</i> is greater than 0.70?
+<br><br>
+<ul>
+<li>What is the sample size?</li>
+<li>What is the alternative hypothesis?</li>
+<li>What is the null hypothesis?</li>
+<li>Set up the problem using the app. What p-value does it estimate, and what is your conclusion at the 5% level?</li>
+</ul>
+</p>
+<p style="margin-bottom:9em;">
+</p>
+
 
 
   <script>

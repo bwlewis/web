@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
- <head>
-  <title>Spurious Correlation, P-Hacking, and Gardens of Forking Paths</title>
- </head>
+<head>
+<title> Spurious correlation and p-hacking: the multiple comparisons problem </title>
+</head>
 <body>
 <style>
   * {
@@ -208,7 +208,7 @@
 </style>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<h1> Spurious correlation, p-hacking, and gardens of forking paths </h1>
+<h1> Spurious correlation and p-hacking: the multiple comparisons problem </h1>
 
 <a href="https://en.wikipedia.org/wiki/Spurious_relationship">Wikipedia says:</a>
 
@@ -227,7 +227,8 @@ For instance, "butter consumption" is highly correlated to the number of doctors
 </p>
 
 <p>
-But spurious correlation is not always funny. It can occur intentionally and accidentally:
+Spurious correlations commonly happen because of the <a href="https://en.wikipedia.org/wiki/Multiple_comparisons_problem">multiple comparisons problem</a>: testing many statistical relationships at once.
+It's not always funny. It can occur intentionally and  un-intentionally:
 <ul>
 <li>P-hacking: Intentionally testing many combinations of variables, dropping data, or altering analyses until an artificially "statistically significant" result is found.
 <li>The Garden of Forking Paths: Unintentionally finding patterns by making analysis choices <i>after</i> seeing the data, unwittingly inflating the chance of finding a random false positive.

@@ -1,72 +1,68 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Paste data and plot a bootstrapped histogram of the mean</title>
+<meta charset="utf-8">
+<title>Bootstrapped histogram of the mean</title>
 
-  <style>
-    body {
-      margin: 16px;
-      font-family: sans-serif;
-    }
-
-    #controls {
-      margin-bottom: 16px;
-    }
-
+<style>
+body {
+  margin: 16px;
+  font-family: sans-serif;
+}
+#controls {
+  margin-bottom: 16px;
+}
 #controls button {
   font: inherit;
 }
-
 .bin-width {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
 }
-
 .bin-width input[type="range"] {
   margin: 0;
 }
-
-    #workspace {
-      display: flex;
-      align-items: flex-start;
-      gap: 24px;
-    }
-
-  #dataEntry {
-    display: flex;
-    flex-direction: column;
-  }
-
-    #grid {
-      border-collapse: collapse;
-      flex: 0 0 auto;
-    }
-
-    td {
-      border: 1px solid #999;
-      min-width: 90px;
-      height: 28px;
-      padding: 2px 6px;
-    }
-
-    td:focus {
-      outline: 2px solid #2675d8;
-    }
-
-    #chartContainer {
-      flex: 1;
-      min-width: 0;
-    }
-
-    #chart {
-      display: block;
-      border: 1px solid #ddd;
-    }
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+.central-interval {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.central-interval input[type="range"] {
+  margin: 0;
+}
+#workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+#dataEntry {
+  display: flex;
+  flex-direction: column;
+}
+#grid {
+  border-collapse: collapse;
+  flex: 0 0 auto;
+}
+td {
+  border: 1px solid #999;
+  min-width: 90px;
+  height: 28px;
+  padding: 2px 6px;
+}
+td:focus {
+  outline: 2px solid #2675d8;
+}
+#chartContainer {
+  flex: 1;
+  min-width: 0;
+}
+#chart {
+  display: block;
+  border: 1px solid #ddd;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 </head>
 
 <body>
@@ -82,21 +78,21 @@ Or, you can edit data in the cell directly. Press the TAB key or SHIFT + TAB to 
 <li>Change the "Bin width" slider to adjust histogram bin width.
 </ol>
 
-  <div id="controls" style="font-size: 1.3em;">
-    <button id="plotButton">Plot bootstrapped mean histogram</button>
-    <label class="bin-width">
-      Bin width:
-      <input id="binWidth" type="range" min="1" max="25" value="5">
-      <span id="binWidthLabel">5%</span> of range
-    </label>
+<div id="controls" style="font-size: 1.3em;">
+<button id="plotButton">Plot bootstrapped mean histogram</button>
+<label class="bin-width">
+  Bin width:
+  <input id="binWidth" type="range" min="1" max="25" value="5">
+  <span id="binWidthLabel">5%</span> of range
+</label>
 <label class="central-interval">
   Highlight central interval:
   <input id="centralInterval" type="range" min="1" max="100" value="100">
   <span id="centralIntervalLabel">100%</span>
 </label>
-  </div>
+</div>
 
-  <div id="workspace">
+<div id="workspace">
   <div id="dataEntry">
 &#8595;PASTE/ENTER DATA HERE&#8595;
     <table id="grid">
@@ -105,29 +101,27 @@ Or, you can edit data in the cell directly. Press the TAB key or SHIFT + TAB to 
       </tbody>
     </table>
   </div>
-
-    <div id="chartContainer">
-      <svg id="chart"></svg>
-    </div>
+  <div id="chartContainer">
+    <svg id="chart"></svg>
   </div>
+</div>
 
-  <script>
-    const chartWidthPercent = 80;
-    const chartHeight = 450;
-    const table = document.querySelector("#grid");
-    const svg = d3.select("#chart");
-    let showMean = false;
-    let centralInterval = 100;
+<script>
+const chartWidthPercent = 80;
+const chartHeight = 450;
+const table = document.querySelector("#grid");
+const svg = d3.select("#chart");
+let showMean = false;
+let centralInterval = 100;
 
-function percentile(sorted, p) {
+const percentile = function(sorted, p) {
   if (p <= 0) return sorted[0];
   if (p >= 1) return sorted[sorted.length - 1];
-
   const index = (sorted.length - 1) * p;
   const lower = Math.floor(index);
   const fraction = index - lower;
   return sorted[lower] + fraction * (sorted[lower + 1] - sorted[lower]);
-}
+};
 
 
 document.querySelector("#binWidth").addEventListener("change", () => {
@@ -146,80 +140,64 @@ centralIntervalSlider.addEventListener("input", () => {
 
 table.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
-
   const startCell = event.target.closest("td");
   if (!startCell) return;
-
   event.preventDefault();
-
   const currentRow = startCell.parentElement;
   const nextRowIndex = currentRow.rowIndex + 1;
   const colIndex = startCell.cellIndex;
-
   let nextRow = table.rows[nextRowIndex];
   if (!nextRow) {
     nextRow = table.insertRow(nextRowIndex);
   }
-
   while (nextRow.cells.length <= colIndex) {
     nextRow.insertCell();
   }
-
   const nextCell = nextRow.cells[colIndex];
   nextCell.contentEditable = "true";
   nextCell.focus();
 });
 
 
-    table.addEventListener("paste", (event) => {
-      const startCell = event.target.closest("td");
-      if (!startCell) return;
-
-
-const text = event.clipboardData.getData("text/plain")
-  .replace(/(?:\r?\n)+$/, "");
-if (!text) {
-  event.preventDefault();
-  const row = table.insertRow();
-  const cell = row.insertCell();
-  cell.contentEditable = "true";
-  cell.focus();
-  return;
-}
-const values = text
-  .split(/\r?\n/)
-  .flatMap(row => row.split(/[\t,]/));
-event.preventDefault();
-const startRow = startCell.parentElement.rowIndex;
-const startCol = startCell.cellIndex;
-values.forEach((value, rowOffset) => {
-  const rowIndex = startRow + rowOffset;
-  while (table.rows.length <= rowIndex) {
-    table.insertRow();
-  }
-  const targetRow = table.rows[rowIndex];
-  while (targetRow.cells.length <= startCol) {
-    const cell = targetRow.insertCell();
+table.addEventListener("paste", (event) => {
+  const startCell = event.target.closest("td");
+  if (!startCell) return;
+  const text = event.clipboardData.getData("text/plain").replace(/(?:\r?\n)+$/, "");
+  if (!text) {
+    event.preventDefault();
+    const row = table.insertRow();
+    const cell = row.insertCell();
     cell.contentEditable = "true";
+    cell.focus();
+    return;
   }
-  const trimmed = value.trim();
-  targetRow.cells[startCol].textContent =
-    trimmed !== "" && Number.isFinite(Number(trimmed))
-      ? trimmed
-      : "";
+  const values = text.split(/\r?\n/).flatMap(row => row.split(/[\t,]/));
+  event.preventDefault();
+  const startRow = startCell.parentElement.rowIndex;
+  const startCol = startCell.cellIndex;
+  values.forEach((value, rowOffset) => {
+    const rowIndex = startRow + rowOffset;
+    while (table.rows.length <= rowIndex) {
+      table.insertRow();
+    }
+    const targetRow = table.rows[rowIndex];
+    while (targetRow.cells.length <= startCol) {
+      const cell = targetRow.insertCell();
+      cell.contentEditable = "true";
+    }
+    const trimmed = value.trim();
+    targetRow.cells[startCol].textContent =
+      trimmed !== "" && Number.isFinite(Number(trimmed)) ? trimmed : "";
+  });
+  const blankRow = table.insertRow(startRow + values.length);
+  blankRow.insertCell().contentEditable = "true";
 });
 
-      const blankRow = table.insertRow(startRow + values.length);
-      blankRow.insertCell().contentEditable = "true";
-    });
-    const slider = document.querySelector("#binWidth");
-    const sliderLabel = document.querySelector("#binWidthLabel");
-    slider.addEventListener("input", () => {
-      sliderLabel.textContent = `${slider.value}%`;
-    });
-
-
-
+const slider = document.querySelector("#binWidth");
+const sliderLabel = document.querySelector("#binWidthLabel");
+slider.addEventListener("input", () => {
+    sliderLabel.textContent = `${slider.value}%`;
+});
 
 document.querySelector("#plotButton").addEventListener("click", () => {
   const values = [...table.querySelectorAll("td")]
@@ -238,7 +216,7 @@ document.querySelector("#plotButton").addEventListener("click", () => {
     return;
   }
 
-  // Generate 10,000 bootstrap resamples, each the same size as the input.
+  // 10,000 bootstrap resamples, each the same size as the input.
   const numberOfResamples = 10000;
   const bootstrapMeans = d3.range(numberOfResamples).map(() => {
     let sum = 0;
@@ -339,8 +317,6 @@ document.querySelector("#plotButton").addEventListener("click", () => {
     .text(`Mean: ${d3.format(".2f")(mean)}`);
 });
 
-
-
-  </script>
+</script>
 </body>
 </html>

@@ -5,153 +5,132 @@
 </head>
 <body>
 <style>
-  * {
-    box-sizing: border-box;
-  }
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-size: 1.2em;
+}
+body {
+  background: #f4f6f8;
+  color: #202124;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  padding: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 10%);
+  margin-bottom: 2rem;
+}
+th,
+td {
+  padding: 0.75rem;
+  border-right: 1px solid #d9e0e7;
+  border-bottom: 1px solid #d9e0e7;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+th:last-child,
+td:last-child {
+  border-right: 0;
+}
+tr:last-child td {
+  border-bottom: 0;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #263b53;
+  color: white;
+  font-weight: 700;
+  text-align: center;
+}
+thead th:first-child {
+  text-align: left;
+}
+th:first-child,
+td:first-child {
+  width: 34%;
+  text-align: left;
+}
+th:not(:first-child),
+td:not(:first-child) {
+  width: 11%;
+  text-align: center;
+}
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+tbody tr:hover {
+  background: #eef6ff;
+}
+td[contenteditable="true"] {
+  min-height: 2.75rem;
+  background: #fffdf0;
+  cursor: text;
+}
+td[contenteditable="true"]:focus {
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+  background: white;
+}
+.btn-container {
+  margin: 20px 0;
+  display: flex;
+  gap: 12px;
+}
+.calc-btn {
+  background-color: #2563eb;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  transition: background-color 0.2s ease;
+}
+.calc-btn:hover {
+  background-color: #1d4ed8;
+}
 
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    font-size: 1.2em;
-  }
-
-  body {
-    background: #f4f6f8;
-    color: #202124;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    padding: 20px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
-    background: white;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 3px 12px rgb(0 0 0 / 10%);
-    margin-bottom: 2rem;
-  }
-
-  th,
-  td {
-    padding: 0.75rem;
-    border-right: 1px solid #d9e0e7;
-    border-bottom: 1px solid #d9e0e7;
-    vertical-align: middle;
-    line-height: 1.35;
-  }
-
-  th:last-child,
-  td:last-child {
-    border-right: 0;
-  }
-
-  tr:last-child td {
-    border-bottom: 0;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #263b53;
-    color: white;
-    font-weight: 700;
-    text-align: center;
-  }
-
-  thead th:first-child {
-    text-align: left;
-  }
-
-  th:first-child,
-  td:first-child {
-    width: 34%;
-    text-align: left;
-  }
-
-  th:not(:first-child),
-  td:not(:first-child) {
-    width: 11%;
-    text-align: center;
-  }
-
-  tbody tr:nth-child(even) {
-    background: #f8fafc;
-  }
-
-  tbody tr:hover {
-    background: #eef6ff;
-  }
-
-  td[contenteditable="true"] {
-    min-height: 2.75rem;
-    background: #fffdf0;
-    cursor: text;
-  }
-
-  td[contenteditable="true"]:focus {
-    outline: 3px solid #60a5fa;
-    outline-offset: -3px;
-    background: white;
-  }
-
-  .btn-container {
-    margin: 20px 0;
-    display: flex;
-    gap: 12px;
-  }
-
-  .calc-btn {
-    background-color: #2563eb;
-    color: white;
-    font-size: 1rem;
-    font-weight: 600;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    transition: background-color 0.2s ease;
-  }
-
-  .calc-btn:hover {
-    background-color: #1d4ed8;
-  }
-
-  .fill-btn {
-    background-color: #475569;
-    color: white;
-    font-size: 1rem;
-    font-weight: 600;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    transition: background-color 0.2s ease;
-  }
-
-  .fill-btn:hover {
-    background-color: #334155;
-  }
-
-  #results-container {
-    margin-bottom: 30px;
-  }
-
-  .charts-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-top: 20px;
-  }
-
+.fill-btn {
+  background-color: #475569;
+  color: white;
+ font-size: 1rem;
+ font-weight: 600;
+ padding: 10px 20px;
+ border: none;
+ border-radius: 6px;
+ cursor: pointer;
+ box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+ transition: background-color 0.2s ease;
+}
+.fill-btn:hover {
+  background-color: #334155;
+}
+#results-container {
+  margin-bottom: 30px;
+}
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
 .chart-card {
   background: white;
   padding: 8px 10px 4px 10px; /* Reduced from 15px */
@@ -162,7 +141,6 @@
   flex-direction: column;
   align-items: center;
 }
-
 .chart-title {
   font-size: 0.85rem; /* Reduced from 1rem */
   font-weight: bold;
@@ -172,39 +150,35 @@
   white-space: pre-line;
   line-height: 1.2;
 }
+.chart-subtitle {
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.axis-label {
+  font-size: 11px;
+  fill: #475569;
+}
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
-  .chart-subtitle {
-    font-size: 0.85rem;
-    color: #2563eb;
-    font-weight: 600;
-    text-align: center;
-    margin-bottom: 8px;
+@media (max-width: 700px) {
+  body {
+    overflow-x: auto;
+  }
+  table {
+    min-width: 850px;
   }
 
-  .axis-label {
-    font-size: 11px;
-    fill: #475569;
+  .charts-grid {
+    grid-template-columns: 1fr;
   }
-
-  @media (max-width: 1024px) {
-    .charts-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 700px) {
-    body {
-      overflow-x: auto;
-    }
-
-    table {
-      min-width: 850px;
-    }
-
-    .charts-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+}
 </style>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -323,90 +297,90 @@ Discuss this process and your results.
 </table>
 
 <script>
-  const table = document.querySelector("#question-table");
-  const style = document.createElement("style");
-  style.textContent = `
-    #question-table td.answer-cell {
-      min-height: 2.75rem;
-      background: #fffdf0;
-      cursor: text;
-      transition: background-color 0.12s, box-shadow 0.12s;
-    }
-    #question-table td.answer-cell.active-cell {
-      background: #ffffff;
-      box-shadow: inset 0 0 0 3px #4285f4;
-      outline: none;
-    }
-  `;
-  document.head.appendChild(style);
-  const rows = [...table.tBodies[0].rows].map(row => {
-    const cells = [...row.cells].slice(1);
-    cells.forEach(cell => {
-      cell.classList.add("answer-cell");
-      cell.contentEditable = "true";
-      cell.tabIndex = 0;
-      cell.spellcheck = false;
-    });
-    return cells;
+const table = document.querySelector("#question-table");
+const style = document.createElement("style");
+style.textContent = `
+  #question-table td.answer-cell {
+    min-height: 2.75rem;
+    background: #fffdf0;
+    cursor: text;
+    transition: background-color 0.12s, box-shadow 0.12s;
+  }
+  #question-table td.answer-cell.active-cell {
+    background: #ffffff;
+    box-shadow: inset 0 0 0 3px #4285f4;
+    outline: none;
+  }
+`;
+document.head.appendChild(style);
+const rows = [...table.tBodies[0].rows].map(row => {
+  const cells = [...row.cells].slice(1);
+  cells.forEach(cell => {
+    cell.classList.add("answer-cell");
+    cell.contentEditable = "true";
+    cell.tabIndex = 0;
+    cell.spellcheck = false;
   });
+  return cells;
+});
 
-  function getCell(node) {
-    if (!node) return null;
-    const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-    const cell = element.closest?.("td");
-    return cell?.classList.contains("answer-cell") ? cell : null;
-  }
+const getCell = function(node) {
+  if (!node) return null;
+  const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  const cell = element.closest?.("td");
+  return cell?.classList.contains("answer-cell") ? cell : null;
+}
 
-  function getCurrentCell() {
-    const selection = window.getSelection();
-    return getCell(selection?.anchorNode) || getCell(document.activeElement);
-  }
+const getCurrentCel = function() {
+  const selection = window.getSelection();
+  return getCell(selection?.anchorNode) || getCell(document.activeElement);
+}
 
-  function setActiveCell(cell) {
-    table.querySelectorAll(".active-cell").forEach(previous => {
-      previous.classList.remove("active-cell");
-    });
-    cell.classList.add("active-cell");
-  }
-
-  function focusCell(cell) {
-    cell.focus();
-    setActiveCell(cell);
-    const range = document.createRange();
-    range.selectNodeContents(cell);
-    range.collapse(false);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-
-  table.addEventListener("focusin", event => {
-    const cell = getCell(event.target);
-    if (cell) setActiveCell(cell);
+const setActiveCell = function(cell) {
+  table.querySelectorAll(".active-cell").forEach(previous => {
+    previous.classList.remove("active-cell");
   });
+  cell.classList.add("active-cell");
+}
 
-  table.addEventListener("keydown", event => {
-    const direction = {
-      ArrowLeft:  [0, -1],
-      ArrowRight: [0,  1],
-      ArrowUp:    [-1, 0],
-      ArrowDown:  [1,  0]
-    }[event.key];
+const focusCell = function(cell) {
+  cell.focus();
+  setActiveCell(cell);
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
 
-    if (!direction) return;
-    const current = getCurrentCell();
-    if (!current) return;
-    const rowIndex = rows.findIndex(row => row.includes(current));
-    const columnIndex = rows[rowIndex]?.indexOf(current);
-    if (rowIndex < 0 || columnIndex < 0) return;
-    const nextRow = rowIndex + direction[0];
-    const nextColumn = columnIndex + direction[1];
-    const next = rows[nextRow]?.[nextColumn];
-    if (next) {
-      event.preventDefault();
-      focusCell(next);
-    }
-  });
+table.addEventListener("focusin", event => {
+  const cell = getCell(event.target);
+  if (cell) setActiveCell(cell);
+});
+
+table.addEventListener("keydown", event => {
+  const direction = {
+    ArrowLeft:  [0, -1],
+    ArrowRight: [0,  1],
+    ArrowUp:    [-1, 0],
+    ArrowDown:  [1,  0]
+  }[event.key];
+
+  if (!direction) return;
+  const current = getCurrentCell();
+  if (!current) return;
+  const rowIndex = rows.findIndex(row => row.includes(current));
+  const columnIndex = rows[rowIndex]?.indexOf(current);
+  if (rowIndex < 0 || columnIndex < 0) return;
+  const nextRow = rowIndex + direction[0];
+  const nextColumn = columnIndex + direction[1];
+  const next = rows[nextRow]?.[nextColumn];
+  if (next) {
+    event.preventDefault();
+    focusCell(next);
+  }
+});
 
 const isTableEmpty = function (table) {
   return Array.from(table.tBodies[0].rows).every(function (row) {
@@ -418,75 +392,75 @@ const isTableEmpty = function (table) {
   });
 };
 
-  const fill = function() {
-    if(! isTableEmpty(document.querySelector('#question-table'))) return;
-    const tableRows = [...table.tBodies[0].rows];
-    const ranges = [
-      [60, 76],   // Height (in)
-      [6, 13],    // Shoe size
-      [0, 4],     // Siblings
-      [3, 10],    // Letters in last name
-      [0, 25],    // Stuffed animals
-      [0, 60],    // bowls of cereal per month
-      [5, 50],    // Movies watched
-      [3, 6],     // Classes taking
-      [4, 10],    // Sleep hours
-      [2, 12],    // Screen time
-      [1, 31],    // Birth day
-      [1, 7],     // Favorite color
-      [0, 100],   // unread email
-      [0, 8],     // Pets owned
-      [1, 12],    // Birth month
-      [1, 15],    // Countries visited
-      [0, 20],    // Cousins
-      [1, 5],     // Vowels in last name
-      [1, 10],    // Keys on keychain
-      [1, 10],    // Spicy rating
-      [3, 6],     // Classes taking
-      [5, 20]     // Countries named
-    ];
+const fill = function() {
+  if(! isTableEmpty(document.querySelector('#question-table'))) return;
+  const tableRows = [...table.tBodies[0].rows];
+  const ranges = [
+    [60, 76],   // Height (in)
+    [6, 13],    // Shoe size
+    [0, 4],     // Siblings
+    [3, 10],    // Letters in last name
+    [0, 25],    // Stuffed animals
+    [0, 60],    // bowls of cereal per month
+    [5, 50],    // Movies watched
+    [3, 6],     // Classes taking
+    [4, 10],    // Sleep hours
+    [2, 12],    // Screen time
+    [1, 31],    // Birth day
+    [1, 7],     // Favorite color
+    [0, 100],   // unread email
+    [0, 8],     // Pets owned
+    [1, 12],    // Birth month
+    [1, 15],    // Countries visited
+    [0, 20],    // Cousins
+    [1, 5],     // Vowels in last name
+    [1, 10],    // Keys on keychain
+    [1, 10],    // Spicy rating
+    [3, 6],     // Classes taking
+    [5, 20]     // Countries named
+  ];
 
-    tableRows.forEach((row, rowIndex) => {
-      const [min, max] = ranges[rowIndex] || [1, 10];
-      for (let colIndex = 1; colIndex < row.cells.length; colIndex++) {
-        const randomVal = Math.floor(Math.random() * (max - min + 1)) + min;
-        row.cells[colIndex].innerText = randomVal;
-      }
-    });
-  };
-
-  function pearsonCorrelation(x, y) {
-    const n = x.length;
-    if (n === 0 || n !== y.length) return NaN;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
-    for (let i = 0; i < n; i++) {
-      sumX += x[i];
-      sumY += y[i];
-      sumXY += x[i] * y[i];
-      sumX2 += x[i] * x[i];
-      sumY2 += y[i] * y[i];
+  tableRows.forEach((row, rowIndex) => {
+    const [min, max] = ranges[rowIndex] || [1, 10];
+    for (let colIndex = 1; colIndex < row.cells.length; colIndex++) {
+      const randomVal = Math.floor(Math.random() * (max - min + 1)) + min;
+      row.cells[colIndex].innerText = randomVal;
     }
-    const numerator = (n * sumXY) - (sumX * sumY);
-    const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
-    if (denominator === 0) return NaN;
-    return numerator / denominator;
-  }
+  });
+};
 
-  function linearRegression(points) {
-    const n = points.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    for (let i = 0; i < n; i++) {
-      sumX += points[i].x;
-      sumY += points[i].y;
-      sumXY += points[i].x * points[i].y;
-      sumX2 += points[i].x * points[i].x;
-    }
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    return { slope, intercept };
+const pearsonCorrelation = function(x, y) {
+  const n = x.length;
+  if (n === 0 || n !== y.length) return NaN;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += x[i];
+    sumY += y[i];
+    sumXY += x[i] * y[i];
+    sumX2 += x[i] * x[i];
+    sumY2 += y[i] * y[i];
   }
+  const numerator = (n * sumXY) - (sumX * sumY);
+  const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+  if (denominator === 0) return NaN;
+  return numerator / denominator;
+}
 
-function renderD3ScatterPlot(container, item, rank) {
+const linearRegression = function(points) {
+  const n = points.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += points[i].x;
+    sumY += points[i].y;
+    sumXY += points[i].x * points[i].y;
+    sumX2 += points[i].x * points[i].x;
+  }
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  return { slope, intercept };
+}
+
+const renderD3ScatterPlot = function(container, item, rank) {
   // Reduced margins to give more plotting area to axes and points
   const margin = { top: 8, right: 15, bottom: 28, left: 35 };
   const width = 340 - margin.left - margin.right;
@@ -555,63 +529,62 @@ function renderD3ScatterPlot(container, item, rank) {
 }
 
 
-  document.getElementById("calc-btn").addEventListener("click", () => {
-    const tableRows = Array.from(table.tBodies[0].rows);
-    const rowData = [];
-    tableRows.forEach(row => {
-      const questionText = row.cells[0].innerText.trim();
-      const values = [];
-      for (let i = 1; i < row.cells.length; i++) {
-        const val = parseFloat(row.cells[i].innerText.trim());
-        values.push(isNaN(val) ? NaN : val);
-      }
-      rowData.push({
-        label: questionText,
-        vector: new Float64Array(values)
-      });
+document.getElementById("calc-btn").addEventListener("click", () => {
+  const tableRows = Array.from(table.tBodies[0].rows);
+  const rowData = [];
+  tableRows.forEach(row => {
+    const questionText = row.cells[0].innerText.trim();
+    const values = [];
+    for (let i = 1; i < row.cells.length; i++) {
+      const val = parseFloat(row.cells[i].innerText.trim());
+      values.push(isNaN(val) ? NaN : val);
+    }
+    rowData.push({
+      label: questionText,
+      vector: new Float64Array(values)
     });
+  });
 
-    const n = rowData.length;
-    const pairwiseResults = [];
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const x = rowData[i].vector;
-        const y = rowData[j].vector;
+  const n = rowData.length;
+  const pairwiseResults = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const x = rowData[i].vector;
+      const y = rowData[j].vector;
 
-        const points = [];
-        const validX = [];
-        const validY = [];
+      const points = [];
+      const validX = [];
+      const validY = [];
 
-        for (let k = 0; k < x.length; k++) {
-          if (!isNaN(x[k]) && !isNaN(y[k])) {
-            points.push({ x: x[k], y: y[k] });
-            validX.push(x[k]);
-            validY.push(y[k]);
-          }
+      for (let k = 0; k < x.length; k++) {
+        if (!isNaN(x[k]) && !isNaN(y[k])) {
+          points.push({ x: x[k], y: y[k] });
+          validX.push(x[k]);
+          validY.push(y[k]);
         }
-        const corr = pearsonCorrelation(validX, validY);
-        if (!isNaN(corr)) {
-          pairwiseResults.push({
-            var1: rowData[i].label,
-            var2: rowData[j].label,
-            correlation: corr,
-            points: points
-          });
-        }
+      }
+      const corr = pearsonCorrelation(validX, validY);
+      if (!isNaN(corr)) {
+        pairwiseResults.push({
+          var1: rowData[i].label,
+          var2: rowData[j].label,
+          correlation: corr,
+          points: points
+        });
       }
     }
-    pairwiseResults.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
-    const top9 = pairwiseResults.slice(0, 9);
-
-    const resultsContainer = document.getElementById("results-container");
-    const chartsGrid = document.getElementById("charts-grid");
-    chartsGrid.innerHTML = "";
-    resultsContainer.style.display = "block";
-    top9.forEach((item, index) => {
-      renderD3ScatterPlot(chartsGrid, item, index + 1);
-    });
-    resultsContainer.scrollIntoView({ behavior: "smooth" });
+  }
+  pairwiseResults.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+  const top9 = pairwiseResults.slice(0, 9);
+  const resultsContainer = document.getElementById("results-container");
+  const chartsGrid = document.getElementById("charts-grid");
+  chartsGrid.innerHTML = "";
+  resultsContainer.style.display = "block";
+  top9.forEach((item, index) => {
+    renderD3ScatterPlot(chartsGrid, item, index + 1);
   });
+  resultsContainer.scrollIntoView({ behavior: "smooth" });
+});
 
 </script>
 
